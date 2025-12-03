@@ -1,6 +1,10 @@
+"use client";
+import { useSignout } from "@/hooks/use-signout";
 import Link from "next/link";
+import { Button } from "./ui/button";
 
 const Navbar = () => {
+  const signout = useSignout();
   return (
     <header className="flex items-center justify-between p-4">
       <h1 className="text-2xl font-bold">
@@ -10,6 +14,7 @@ const Navbar = () => {
         <Link href={"/"}>Leaderboard</Link>
         <Link href={"/"}>Friends</Link>
         <Link href={"/login"}>Profile</Link>
+        <Button onClick={signout}>Logout</Button>
       </nav>
     </header>
   );

@@ -81,5 +81,5 @@ export async function signOutAction() {
     headers: await headers(),
   });
 
-  redirect("");
+  redirect("/");
 }

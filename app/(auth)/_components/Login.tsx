@@ -17,6 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { signInAction } from "../actions/auth";
+import { authClient } from "@/lib/auth-client";
 const Login = () => {
   const [loginPending, startLoginTransition] = useTransition();
   const [githubPending, startGithubTransition] = useTransition();
@@ -30,6 +31,41 @@ const Login = () => {
       password: "",
     },
   });
+
+  function signInWithGithub() {
+    startGithubTransition(async () => {
+      await authClient.signIn.social({
+        provider: "github",
+        callbackURL: "/",
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/");
+          },
+          onError: () => {
+            console.error("Failed to login with Github: ");
+          },
+        },
+      });
+    });
+  }
+
+  function signInWithGoogle() {
+    startGoogleTransition(async () => {
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+        fetchOptions: {
+          onSuccess: () => {
+            router.push("/");
+          },
+          onError: () => {
+            console.error("Failed to login with Google: ");
+          },
+        },
+      });
+    });
+  }
+
   function onSubmit(values: loginSchemaType) {
     startLoginTransition(async () => {
       const result = await signInAction(values);
@@ -50,7 +86,11 @@ const Login = () => {
           <p>Login</p>
         </div>
         <div className="flex w-full gap-2 mb-2">
-          <Button className="flex-1">
+          <Button
+            onClick={signInWithGoogle}
+            disabled={googlePending}
+            className="flex-1"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               x="0px"
@@ -65,7 +105,11 @@ const Login = () => {
               ></path>
             </svg>
           </Button>
-          <Button className="flex-1">
+          <Button
+            onClick={signInWithGithub}
+            disabled={githubPending}
+            className="flex-1"
+          >
             <Github className="size-5" />
           </Button>
         </div>

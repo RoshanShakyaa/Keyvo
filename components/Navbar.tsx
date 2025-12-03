@@ -1,21 +1,58 @@
-"use client";
-import { useSignout } from "@/hooks/use-signout";
 import Link from "next/link";
-import { Button } from "./ui/button";
+import { Trophy, Users } from "lucide-react";
 
-const Navbar = () => {
-  const signout = useSignout();
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import UserDropDown from "./Avatar";
+import { getServerSession } from "@/lib/get-session";
+
+const Navbar = async () => {
+  const session = await getServerSession();
+  const user = session?.user;
+
   return (
-    <header className="flex items-center justify-between p-4">
-      <h1 className="text-2xl font-bold">
-        Key<span className="text-blue-500">vo</span>
-      </h1>
-      <nav className="flex gap-6">
-        <Link href={"/"}>Leaderboard</Link>
-        <Link href={"/"}>Friends</Link>
-        <Link href={"/login"}>Profile</Link>
-        <Button onClick={signout}>Logout</Button>
-      </nav>
+    <header className="sticky top-0 z-50 w-full  backdrop-blur">
+      <div className=" flex h-16 items-center justify-between px-4 md:px-6">
+        <Link
+          href="/"
+          className="flex items-center gap-2 transition-opacity hover:opacity-90"
+        >
+          <h1 className="text-2xl font-bold tracking-tighter">
+            Key<span className="text-blue-500">vo</span>
+          </h1>
+        </Link>
+
+        <nav className="flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/leaderboard"
+                  className="flex items-center gap-2 transition-colors hover:text-foreground"
+                >
+                  <Trophy className="size-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Leaderboard</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/friends"
+                  className="flex items-center gap-2 transition-colors hover:text-foreground"
+                >
+                  <Users className="size-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Friends</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <UserDropDown />
+        </nav>
+      </div>
     </header>
   );
 };

@@ -16,7 +16,6 @@ import z from "zod";
 import { Separator } from "@/components/ui/separator";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { signInAction } from "../actions/auth";
 import { authClient } from "@/lib/auth-client";
 const Login = () => {
   const [loginPending, startLoginTransition] = useTransition();
@@ -68,13 +67,21 @@ const Login = () => {
 
   function onSubmit(values: loginSchemaType) {
     startLoginTransition(async () => {
-      const result = await signInAction(values);
+      const { email, password } = values;
 
-      if (result.status === "success") {
-        form.reset();
-        router.push("/");
-        return;
-      }
+      await authClient.signIn.email({
+        email,
+        password,
+        fetchOptions: {
+          onSuccess: () => {
+            form.reset();
+            router.push("/");
+          },
+          onError: (err) => {
+            console.error("Login failed", err);
+          },
+        },
+      });
     });
   }
 
@@ -134,7 +141,7 @@ const Login = () => {
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <Input placeholder="password" {...field} />
+                  <Input placeholder="password" {...field} type="password" />
                 </FormControl>
 
                 <FormMessage />

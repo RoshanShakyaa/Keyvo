@@ -3,12 +3,8 @@ import { Trophy, Users } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import UserDropDown from "./Avatar";
-import { getServerSession } from "@/lib/get-session";
 
 const Navbar = async () => {
-  const session = await getServerSession();
-  const user = session?.user;
-
   return (
     <header className="sticky top-0 z-50 w-full  backdrop-blur">
       <div className=" flex h-16 items-center justify-between px-4 md:px-6">

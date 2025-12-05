@@ -31,7 +31,7 @@ export default function RootLayout({
         <div className="container  mx-auto flex flex-col  min-h-dvh ">
           <Navbar />
           {children}
-          <div className="footer text-center h-20">hellow</div>
+          <div className="footer text-center h-20">hellow my foot</div>
         </div>
       </body>
     </html>

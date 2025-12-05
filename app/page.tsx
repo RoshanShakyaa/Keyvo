@@ -3,6 +3,7 @@ import { BigKeyboard } from "@/components/keyboard";
 import { useKeyboardUIStore } from "@/lib/store";
 import { faker } from "@faker-js/faker";
 import RestartButton from "./_components/RestartButton";
+import Result from "./_components/Result";
 
 export default function Home() {
   const keyboard = useKeyboardUIStore((state) => state.display);
@@ -29,6 +30,7 @@ export default function Home() {
           className="mx-auto mt-10 text-zinc-700"
           onRestart={() => null}
         />
+        <Result accuracyPercentage={100} errors={1} total={200} />
         <div className="mt-30">{keyboard && <BigKeyboard />}</div>
       </div>
     </section>

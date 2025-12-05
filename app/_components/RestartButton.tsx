@@ -20,9 +20,9 @@ const RestartButton = ({
     <button
       ref={buttonRef}
       onClick={handleClick}
-      className={`block rounded px-8 py-2 hover:bg-slate-700/50 ${className}`}
+      className={`block rounded  cursor-pointer group ${className}`}
     >
-      <RefreshCcw className="size-6" />
+      <RefreshCcw className="size-6 group-hover:text-blue-400" />
     </button>
   );
 };

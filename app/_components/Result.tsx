@@ -1,12 +1,16 @@
+"use client";
 interface ResultProps {
   errors: number;
   accuracyPercentage: number;
   total: number;
   className?: string;
+  state: State;
 }
+import { State } from "@/hooks/useEngine";
 import { motion } from "motion/react";
 
 const Result = ({
+  state,
   errors,
   accuracyPercentage,
   total,
@@ -14,7 +18,11 @@ const Result = ({
 }: ResultProps) => {
   const initial = { opacity: 0 };
   const animate = { opacity: 1 };
-  const duration = { opacity: 0.3 };
+  const duration = { duration: 0.3 };
+
+  if (state !== "finish") {
+    return null;
+  }
 
   return (
     <ul

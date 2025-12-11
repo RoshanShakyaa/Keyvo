@@ -1,65 +1,36 @@
-"use client";
-interface ResultProps {
-  errors: number;
-  accuracyPercentage: number;
-  total: number;
-  className?: string;
-  state: State;
-}
-import { State } from "@/hooks/useEngine";
 import { motion } from "motion/react";
-
-const Result = ({
-  state,
-  errors,
-  accuracyPercentage,
-  total,
-  className,
-}: ResultProps) => {
-  const initial = { opacity: 0 };
-  const animate = { opacity: 1 };
-  const duration = { duration: 0.3 };
-
-  if (state !== "finish") {
-    return null;
-  }
-
+export const Results = ({
+  wpm,
+  accuracy,
+  onRestart,
+}: {
+  wpm: number;
+  accuracy: number;
+  onRestart: () => void;
+}) => {
   return (
-    <ul
-      className={`flex flex-col items-center text-blue-400 space-y-3 mt-20 ${className}`}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex flex-col items-center justify-center gap-6 p-8 bg-gray-800 rounded-lg"
     >
-      <motion.li
-        initial={initial}
-        animate={animate}
-        transition={{ ...duration, delay: 0 }}
-        className="text-xl font-semibold"
+      <h2 className="text-3xl font-bold text-yellow-400">Test Complete!</h2>
+      <div className="flex gap-12">
+        <div className="text-center">
+          <div className="text-5xl font-bold text-white">{wpm}</div>
+          <div className="text-gray-400 mt-2">WPM</div>
+        </div>
+        <div className="text-center">
+          <div className="text-5xl font-bold text-white">{accuracy}%</div>
+          <div className="text-gray-400 mt-2">Accuracy</div>
+        </div>
+      </div>
+      <button
+        onClick={onRestart}
+        className="px-6 py-3 bg-yellow-400 text-gray-900 font-semibold rounded-lg hover:bg-yellow-300 transition-colors"
       >
-        Results
-      </motion.li>
-      <motion.li
-        initial={initial}
-        animate={animate}
-        transition={{ ...duration, delay: 0.5 }}
-      >
-        Accuracy: {accuracyPercentage}
-      </motion.li>
-      <motion.li
-        className="text-red-500"
-        initial={initial}
-        animate={animate}
-        transition={{ ...duration, delay: 1 }}
-      >
-        Errors: {errors}
-      </motion.li>
-      <motion.li
-        initial={initial}
-        animate={animate}
-        transition={{ ...duration, delay: 1.4 }}
-      >
-        Typed: {total}
-      </motion.li>
-    </ul>
+        Restart Test
+      </button>
+    </motion.div>
   );
 };
-
-export default Result;

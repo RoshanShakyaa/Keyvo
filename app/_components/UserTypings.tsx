@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import Cartet from "./Cartet";
 
 interface UserTypingsProps {
   userInput: string;
@@ -18,7 +17,6 @@ const UserTypings = ({ userInput, className, words }: UserTypingsProps) => {
           key={`${char}_${index}`}
         ></Character>
       ))}
-      <Cartet />
     </div>
   );
 };

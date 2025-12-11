@@ -1,34 +1,45 @@
-"use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-const useCountdownTimer = (seconds: number) => {
+export default function useCountdownTimer(seconds: number) {
   const [timeLeft, setTimeLeft] = useState(seconds);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const intervalRef = useRef<number | null>(null);
 
-  const startCountdown = useCallback(() => {
-    console.log("Starting countdown...");
+  const start = useCallback(() => {
+    if (intervalRef.current !== null) return;
 
-    intervalRef.current = setInterval(() => {
-      setTimeLeft((timeLeft) => timeLeft - 1);
+    setIsRunning(true);
+    intervalRef.current = window.setInterval(() => {
+      setTimeLeft((t) => {
+        if (t <= 1) {
+          if (intervalRef.current !== null) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setIsRunning(false);
+          return 0;
+        }
+        return t - 1;
+      });
     }, 1000);
-  }, [setTimeLeft]);
+  }, []);
 
-  const resetCountDown = useCallback(() => {
-    console.log("resetting countdown...");
-    if (intervalRef.current) {
+  const reset = useCallback(() => {
+    if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
+    setIsRunning(false);
     setTimeLeft(seconds);
   }, [seconds]);
 
-  useEffect(() => {
-    if (!timeLeft && intervalRef.current) {
-      console.log("clearing timer..");
+  const stop = useCallback(() => {
+    if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
-  }, [timeLeft, intervalRef]);
+    setIsRunning(false);
+  }, []);
 
-  return { timeLeft, startCountdown, resetCountDown };
-};
-
-export default useCountdownTimer;
+  return { timeLeft, isRunning, start, reset, stop };
+}

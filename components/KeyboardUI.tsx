@@ -1,5 +1,5 @@
 "use client";
-import { BigKeyboard } from "@/components/keyboard";
+import { BigKeyboard } from "@/components/ui/keyboard";
 import { useKeyboardUIStore } from "@/lib/store";
 
 const KeyboardUI = () => {

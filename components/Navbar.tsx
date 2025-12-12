@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Trophy, Users } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import UserDropDown from "./Avatar";
+import UserDropDown from "./UserDropdown";
 
 const Navbar = async () => {
   return (

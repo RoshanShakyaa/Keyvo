@@ -25,14 +25,15 @@ export default function useCountdownTimer(seconds: number) {
   }, []);
 
   const reset = useCallback(() => {
+    console.log("TIMER RESET CALLED - before:", timeLeft);
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     setIsRunning(false);
     setTimeLeft(seconds);
-  }, [seconds]);
-
+    console.log("TIMER RESET CALLED - after, should be:", seconds);
+  }, [seconds, timeLeft]);
   const stop = useCallback(() => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);

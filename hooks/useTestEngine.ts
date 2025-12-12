@@ -7,6 +7,14 @@ export function useTestEngine(words: string[], durationSeconds: number) {
   const timer = useCountdownTimer(durationSeconds);
   const typing = useTypingEngine(text, timer.start);
 
+  // Set up completion callback
+  useEffect(() => {
+    typing.setOnComplete(() => {
+      timer.stop();
+      typing.finish();
+    });
+  }, [typing, timer]);
+
   // Auto-finish when timer reaches 0
   useEffect(() => {
     if (timer.timeLeft === 0 && !typing.isFinished) {
@@ -15,6 +23,7 @@ export function useTestEngine(words: string[], durationSeconds: number) {
   }, [timer.timeLeft, typing.isFinished, typing]);
 
   const reset = useCallback(() => {
+    console.log("Reset called!", typing, timer);
     typing.clear();
     timer.reset();
   }, [typing, timer]);

@@ -23,17 +23,16 @@ export default function useCountdownTimer(seconds: number) {
       });
     }, 1000);
   }, []);
-
+  // useCountdownTimer.ts
   const reset = useCallback(() => {
-    console.log("TIMER RESET CALLED - before:", timeLeft);
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     setIsRunning(false);
     setTimeLeft(seconds);
-    console.log("TIMER RESET CALLED - after, should be:", seconds);
-  }, [seconds, timeLeft]);
+  }, [seconds]);
+
   const stop = useCallback(() => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);

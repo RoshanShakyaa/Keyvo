@@ -136,12 +136,10 @@ export function useTypingEngine(text: string, onStart: () => void) {
   }, [handleKey]);
 
   const clear = useCallback(() => {
-    console.log("CLEAR CALLED - before:", typedChars.length);
     setTypedChars([]);
     setIsFinished(false);
     hasStartedRef.current = false;
-    console.log("CLEAR CALLED - after");
-  }, [typedChars.length]);
+  }, []); // Empty dependency array since we're just resetting state
   const finish = useCallback(() => {
     setIsFinished(true);
   }, []);

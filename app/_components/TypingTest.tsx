@@ -1,28 +1,34 @@
 "use client";
 
 import { useTestEngine } from "@/hooks/useTestEngine";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Results } from "./Result";
 import Caret from "./Caret";
 import { getRandomWords } from "@/lib/words";
 import { RotateCw } from "lucide-react";
 import ToolKit from "./ToolKit";
 import KeyboardUI from "@/components/KeyboardUI";
+import { useToolkitStore } from "@/lib/store";
 
-const TypingTest = () => {
-  const [words, setWords] = useState(() => getRandomWords(15));
-
-  const { text, typing, timer, reset, results } = useTestEngine(words, 30);
+const TypingTestCore = ({
+  time,
+  wordCount,
+  words,
+}: {
+  time: number;
+  wordCount: number;
+  words: string[];
+}) => {
+  const { text, typing, timer, reset, results } = useTestEngine(words, time);
 
   const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const restartButtonRef = useRef<HTMLButtonElement>(null);
   const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
 
-  const handleRestart = () => {
-    setWords(getRandomWords(15));
+  const handleRestart = useCallback(() => {
     reset();
-  };
+  }, [reset]);
 
   useEffect(() => {
     const currentChar = charRefs.current[typing.caret];
@@ -55,13 +61,12 @@ const TypingTest = () => {
       ) {
         e.preventDefault();
         e.stopPropagation();
-        restartButtonRef.current?.blur(); // Remove focus before restart
+        restartButtonRef.current?.blur();
         handleRestart();
         return;
       }
     };
 
-    // Use capture phase to intercept before typing engine
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [handleRestart]);
@@ -133,6 +138,28 @@ const TypingTest = () => {
         <KeyboardUI />
       </div>
     </div>
+  );
+};
+
+const TypingTest = () => {
+  const { time, words: wordCount, punctuation, number } = useToolkitStore();
+
+  // Generate words only when word settings change
+  const words = useMemo(
+    () => getRandomWords(wordCount),
+    [wordCount, punctuation, number]
+  );
+
+  // Remount only when time changes (keeps same words)
+  const testKey = `${time}`;
+
+  return (
+    <TypingTestCore
+      key={testKey}
+      time={time}
+      wordCount={wordCount}
+      words={words}
+    />
   );
 };
 

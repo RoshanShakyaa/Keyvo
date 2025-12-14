@@ -12,7 +12,6 @@ import { useToolkitStore } from "@/lib/store";
 
 const TypingTestCore = ({
   time,
-  wordCount,
   words,
 }: {
   time: number;
@@ -73,7 +72,7 @@ const TypingTestCore = ({
 
   if (results) {
     return (
-      <div className="flex-1 bg-red-300 flex items-center">
+      <div className="flex-1 flex items-center">
         <Results
           wpm={results.wpm}
           accuracy={results.accuracy}
@@ -84,19 +83,21 @@ const TypingTestCore = ({
   }
 
   return (
-    <div className="w-full flex flex-col  flex-1">
+    <div className="w-full flex flex-col flex-1">
       <ToolKit />
 
       <div className="mt-30">
         {/* Timer */}
-        <div className=" mb-4">
-          <div className="text-xl ">{timer.timeLeft}</div>
+        <div className="mb-4">
+          <div className="text-xl text-primary font-semibold">
+            {timer.timeLeft}
+          </div>
         </div>
 
         {/* Typing Area */}
         <div
           ref={containerRef}
-          className="relative   rounded-lg text-2xl leading-relaxed font-mono select-none"
+          className="relative rounded-lg text-2xl leading-relaxed font-mono select-none"
           style={{ minHeight: "200px" }}
         >
           <Caret top={caretPos.top} left={caretPos.left} />
@@ -104,10 +105,10 @@ const TypingTestCore = ({
           <div className="relative">
             {text.split("").map((char, i) => {
               const typed = typing.typedChars[i];
-              let color = "text-gray-500";
+              let color = "text-muted-foreground";
 
               if (typed) {
-                color = typed.correct ? "text-black" : "text-red-500";
+                color = typed.correct ? "text-foreground" : "text-destructive";
               }
 
               return (
@@ -130,7 +131,7 @@ const TypingTestCore = ({
           <button
             ref={restartButtonRef}
             onClick={handleRestart}
-            className="px-4 py-2 rounded cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
+            className="px-4 py-2 rounded cursor-pointer text-muted-foreground hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <RotateCw className="size-6" />
           </button>
@@ -142,13 +143,10 @@ const TypingTestCore = ({
 };
 
 const TypingTest = () => {
-  const { time, words: wordCount, punctuation, number } = useToolkitStore();
+  const { time, words: wordCount } = useToolkitStore();
 
   // Generate words only when word settings change
-  const words = useMemo(
-    () => getRandomWords(wordCount),
-    [wordCount, punctuation, number]
-  );
+  const words = useMemo(() => getRandomWords(wordCount), [wordCount]);
 
   // Remount only when time changes (keeps same words)
   const testKey = `${time}`;

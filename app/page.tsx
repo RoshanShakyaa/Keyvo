@@ -8,7 +8,7 @@ const TypingTest = dynamic(() => import("@/app/_components/TypingTest"), {
 
 export default function Home() {
   return (
-    <section className=" flex-1 flex flex-col p-10">
+    <section className="dark flex-1 flex flex-col p-10">
       <TypingTest />
     </section>
   );

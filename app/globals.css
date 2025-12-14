@@ -79,37 +79,58 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* === Monkeytype Norse Theme === */
+  /* bg: #242425, main: #2b5f6d, sub: #505b5e, text: #ccc2b1 */
+
+  /* Backgrounds */
+  --background: #242425;
+  --card: #2a2a2b;
+  --popover: #2a2a2b;
+  --sidebar: #272728;
+
+  /* Text */
+  --foreground: #ccc2b1;
+  --card-foreground: #ccc2b1;
+  --popover-foreground: #ccc2b1;
+  --sidebar-foreground: #c5bcab;
+
+  /* Primary (main color from monkeytype) */
+  --primary: #2b5f6d;
+  --primary-foreground: #ccc2b1;
+
+  /* Secondary / muted (sub color) */
+  --secondary: #505b5e;
+  --secondary-foreground: #ccc2b1;
+
+  --muted: #3a4144;
+  --muted-foreground: #8a8577;
+
+  /* Accent */
+  --accent: #2b5f6d;
+  --accent-foreground: #ccc2b1;
+
+  /* Borders & inputs */
+  --border: #3a3a3b;
+  --input: #505b5e;
+  --ring: #2b5f6d;
+
+  /* Destructive */
+  --destructive: #ca6060;
+
+  /* Charts */
+  --chart-1: #2b5f6d;
+  --chart-2: #3d737f;
+  --chart-3: #4f8791;
+  --chart-4: #619ba3;
+  --chart-5: #73afb5;
+
+  /* Sidebar specifics */
+  --sidebar-primary: #2b5f6d;
+  --sidebar-primary-foreground: #ccc2b1;
+  --sidebar-accent: #505b5e;
+  --sidebar-accent-foreground: #ccc2b1;
+  --sidebar-border: #3a3a3b;
+  --sidebar-ring: #2b5f6d;
 }
 
 @layer base {

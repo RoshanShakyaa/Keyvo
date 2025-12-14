@@ -3,6 +3,7 @@ import { Trophy, Users } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import UserDropDown from "./UserDropdown";
+import { ModeToggle } from "./ui/ModeToggle";
 
 const Navbar = async () => {
   return (
@@ -13,12 +14,13 @@ const Navbar = async () => {
           className="flex items-center gap-2 transition-opacity hover:opacity-90"
         >
           <h1 className="text-2xl font-bold tracking-tighter">
-            Key<span className="text-blue-500">vo</span>
+            Key<span className="text-primary">vo</span>
           </h1>
         </Link>
 
         <nav className="flex items-center gap-6">
           <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
+            <ModeToggle />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link

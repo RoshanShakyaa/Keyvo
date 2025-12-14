@@ -1,7 +1,7 @@
 "use client";
 
 import { useKeyboardUIStore, useToolkitStore } from "@/lib/store";
-import { Keyboard } from "lucide-react";
+import { CaseUpper, Keyboard, Timer } from "lucide-react";
 
 const ToolKit = () => {
   const toggleKeyboard = useKeyboardUIStore((s) => s.toggleKeyboard);
@@ -16,29 +16,44 @@ const ToolKit = () => {
     words,
     time,
   } = useToolkitStore();
-  const active = "font-semibold text-black cursor-pointer";
-  const inactive = "font-normal text-gray-500 cursor-pointer";
+
+  const active = "font-semibold text-primary cursor-pointer";
+  const inactive =
+    "font-normal text-muted-foreground cursor-pointer hover:text-foreground";
+
   return (
-    <div className="flex items-center gap-6 justify-center bg-gray-200 py-2 px-6 rounded-md w-fit mx-auto">
-      <button onClick={toggleKeyboard}>
+    <div className="flex items-center gap-6 justify-center bg-secondary/50 py-2 px-6 rounded-md w-fit mx-auto">
+      <button
+        onClick={toggleKeyboard}
+        className="text-muted-foreground hover:text-primary transition-colors"
+      >
         <Keyboard />
       </button>
 
       <button
-        className={`cursor-pointer ${punctuation && "font-semibold"}`}
+        className={`cursor-pointer transition-colors ${
+          punctuation
+            ? "font-semibold text-primary"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
         onClick={togglePunctuation}
       >
         punctuation
       </button>
 
       <button
-        className={`cursor-pointer ${number && "font-semibold"}`}
+        className={`cursor-pointer transition-colors ${
+          number
+            ? "font-semibold text-primary"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
         onClick={toggleNumber}
       >
         numbers
       </button>
 
-      <span>|</span>
+      <span className="text-border">|</span>
+      <Timer className="size-4 text-muted-foreground" />
       <button
         className={time === 15 ? active : inactive}
         onClick={() => setTime(15)}
@@ -66,12 +81,14 @@ const ToolKit = () => {
       >
         120
       </button>
-      <span>|</span>
+
+      <span className="text-border">|</span>
+      <CaseUpper className="size-4 text-muted-foreground" />
       <button
-        className={words === 10 ? active : inactive}
-        onClick={() => setWords(10)}
+        className={words === 15 ? active : inactive}
+        onClick={() => setWords(15)}
       >
-        10
+        15
       </button>
 
       <button

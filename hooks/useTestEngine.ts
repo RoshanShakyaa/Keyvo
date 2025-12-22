@@ -22,6 +22,11 @@ export function useTestEngine(words: string[], durationSeconds: number) {
     }
   }, [timer.timeLeft, typing.isFinished, typing]);
 
+  // Reset typing when text changes (new words)
+  useEffect(() => {
+    typing.clear();
+  }, [text, typing.clear]);
+
   const reset = useCallback(() => {
     console.log("Reset called!", typing, timer);
     typing.clear();

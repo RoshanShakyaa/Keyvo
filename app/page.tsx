@@ -1,5 +1,4 @@
 "use client";
-import KeyboardUI from "../components/KeyboardUI";
 import dynamic from "next/dynamic";
 
 const TypingTest = dynamic(() => import("@/app/_components/TypingTest"), {

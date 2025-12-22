@@ -13,10 +13,12 @@ import { useToolkitStore } from "@/lib/store";
 const TypingTestCore = ({
   time,
   words,
+  onRegenerate,
 }: {
   time: number;
   wordCount: number;
   words: string[];
+  onRegenerate: () => void;
 }) => {
   const { text, typing, timer, reset, results } = useTestEngine(words, time);
 
@@ -26,8 +28,9 @@ const TypingTestCore = ({
   const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
 
   const handleRestart = useCallback(() => {
+    onRegenerate(); // This will trigger new words in parent
     reset();
-  }, [reset]);
+  }, [reset, onRegenerate]);
 
   useEffect(() => {
     const currentChar = charRefs.current[typing.caret];
@@ -72,7 +75,7 @@ const TypingTestCore = ({
 
   if (results) {
     return (
-      <div className="flex-1 flex items-center">
+      <div className="flex-1 bg-red-300 flex items-center">
         <Results
           wpm={results.wpm}
           accuracy={results.accuracy}
@@ -83,21 +86,19 @@ const TypingTestCore = ({
   }
 
   return (
-    <div className="w-full flex flex-col flex-1">
+    <div className="w-full flex flex-col  flex-1">
       <ToolKit />
 
       <div className="mt-30">
         {/* Timer */}
-        <div className="mb-4">
-          <div className="text-xl text-primary font-semibold">
-            {timer.timeLeft}
-          </div>
+        <div className=" mb-4">
+          <div className="text-xl ">{timer.timeLeft}</div>
         </div>
 
         {/* Typing Area */}
         <div
           ref={containerRef}
-          className="relative rounded-lg text-2xl leading-relaxed font-mono select-none"
+          className="relative   rounded-lg text-2xl leading-relaxed font-mono select-none"
           style={{ minHeight: "200px" }}
         >
           <Caret top={caretPos.top} left={caretPos.left} />
@@ -105,10 +106,10 @@ const TypingTestCore = ({
           <div className="relative">
             {text.split("").map((char, i) => {
               const typed = typing.typedChars[i];
-              let color = "text-muted-foreground";
+              let color = "text-gray-500";
 
               if (typed) {
-                color = typed.correct ? "text-foreground" : "text-destructive";
+                color = typed.correct ? "text-primary" : "text-red-500";
               }
 
               return (
@@ -131,7 +132,7 @@ const TypingTestCore = ({
           <button
             ref={restartButtonRef}
             onClick={handleRestart}
-            className="px-4 py-2 rounded cursor-pointer text-muted-foreground hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-4 py-2 rounded cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-400"
           >
             <RotateCw className="size-6" />
           </button>
@@ -143,10 +144,21 @@ const TypingTestCore = ({
 };
 
 const TypingTest = () => {
-  const { time, words: wordCount } = useToolkitStore();
+  const { time, words: wordCount, punctuation, number } = useToolkitStore();
 
-  // Generate words only when word settings change
-  const words = useMemo(() => getRandomWords(wordCount), [wordCount]);
+  // Use state to force regeneration
+  const [wordsKey, setWordsKey] = useState(0);
+
+  // Generate words when settings or key changes
+  const words = useMemo(() => {
+    console.log("Generating new words:", wordCount);
+    return getRandomWords(wordCount);
+  }, [wordCount, punctuation, number, wordsKey]);
+
+  // Callback to regenerate words
+  const regenerateWords = useCallback(() => {
+    setWordsKey((prev) => prev + 1);
+  }, []);
 
   // Remount only when time changes (keeps same words)
   const testKey = `${time}`;
@@ -157,6 +169,7 @@ const TypingTest = () => {
       time={time}
       wordCount={wordCount}
       words={words}
+      onRegenerate={regenerateWords}
     />
   );
 };

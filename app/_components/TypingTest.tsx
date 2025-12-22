@@ -75,10 +75,13 @@ const TypingTestCore = ({
 
   if (results) {
     return (
-      <div className="flex-1 bg-red-300 flex items-center">
+      <div className="flex-1 flex items-center">
         <Results
           wpm={results.wpm}
+          rawWpm={results.rawWpm}
           accuracy={results.accuracy}
+          errors={results.errors}
+          chartData={results.chartData}
           onRestart={handleRestart}
         />
       </div>
@@ -151,8 +154,15 @@ const TypingTest = () => {
 
   // Generate words when settings or key changes
   const words = useMemo(() => {
-    console.log("Generating new words:", wordCount);
-    return getRandomWords(wordCount);
+    console.log(
+      "Generating new words:",
+      wordCount,
+      "punctuation:",
+      punctuation,
+      "numbers:",
+      number
+    );
+    return getRandomWords(wordCount, { punctuation, numbers: number });
   }, [wordCount, punctuation, number, wordsKey]);
 
   // Callback to regenerate words
@@ -173,5 +183,4 @@ const TypingTest = () => {
     />
   );
 };
-
 export default TypingTest;

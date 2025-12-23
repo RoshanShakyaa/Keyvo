@@ -8,8 +8,11 @@ type ChartDataPoint = {
   raw: number;
   errors: number;
 };
-
-export function useTestEngine(words: string[], durationSeconds: number) {
+export function useTestEngine(
+  words: string[],
+  durationSeconds: number,
+  mode: "time" | "words"
+) {
   const text = useMemo(() => words.join(" "), [words]);
   const timer = useCountdownTimer(durationSeconds);
   const typing = useTypingEngine(text, timer.start);
@@ -22,12 +25,12 @@ export function useTestEngine(words: string[], durationSeconds: number) {
     });
   }, [typing, timer]);
 
-  // Auto-finish when timer reaches 0
+  // Auto-finish when timer reaches 0 (ONLY in time mode)
   useEffect(() => {
-    if (timer.timeLeft === 0 && !typing.isFinished) {
+    if (mode === "time" && timer.timeLeft === 0 && !typing.isFinished) {
       typing.finish();
     }
-  }, [timer.timeLeft, typing.isFinished, typing]);
+  }, [timer.timeLeft, typing.isFinished, typing, mode]);
 
   // Reset typing when text changes (new words)
   useEffect(() => {
@@ -104,14 +107,18 @@ export function useTestEngine(words: string[], durationSeconds: number) {
       };
     }
 
-    // Calculate actual time spent typing (start to last keystroke)
-    const testStartTime = typedChars[0].timestamp;
-    const testEndTime = typedChars[typedChars.length - 1].timestamp;
-    const elapsedSeconds = (testEndTime - testStartTime) / 1000;
+    // Calculate time based on mode
+    let timeToUse: number;
 
-    // If timer ran out, use the full duration
-    // If finished early, use actual elapsed time
-    const timeToUse = timer.timeLeft === 0 ? durationSeconds : elapsedSeconds;
+    if (mode === "time") {
+      // In time mode, always use the full duration
+      timeToUse = durationSeconds;
+    } else {
+      // In words mode, use actual elapsed time
+      const testStartTime = typedChars[0].timestamp;
+      const testEndTime = typedChars[typedChars.length - 1].timestamp;
+      timeToUse = (testEndTime - testStartTime) / 1000;
+    }
 
     // Monkeytype formula: (chars / 5) / (seconds / 60)
     const wpm = Math.round(correctChars / 5 / (timeToUse / 60));
@@ -123,7 +130,7 @@ export function useTestEngine(words: string[], durationSeconds: number) {
 
     const errors = rawChars - correctChars;
 
-    const chartData = calculateChartData(typedChars, testStartTime);
+    const chartData = calculateChartData(typedChars, typedChars[0].timestamp);
 
     return {
       wpm,
@@ -134,7 +141,7 @@ export function useTestEngine(words: string[], durationSeconds: number) {
       errors,
       chartData,
     };
-  }, [typing, durationSeconds, timer.timeLeft, calculateChartData]);
+  }, [typing, durationSeconds, mode, calculateChartData]);
 
   return {
     text,

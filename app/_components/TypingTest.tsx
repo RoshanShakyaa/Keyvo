@@ -146,7 +146,7 @@ const TypingTestCore = ({
               let color = "text-gray-500";
 
               if (typed) {
-                color = typed.correct ? "text-primary" : "text-red-500";
+                color = typed.correct ? "text-primary" : "text-red-900";
               }
 
               return (

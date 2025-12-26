@@ -45,28 +45,28 @@ const ToolKit = () => {
 
       {/* Time Mode */}
       <button
-        className={time === 15 ? active : inactive}
+        className={mode === "time" && time === 15 ? active : inactive}
         onClick={() => setTime(15)}
       >
         15
       </button>
 
       <button
-        className={time === 30 ? active : inactive}
+        className={mode === "time" && time === 30 ? active : inactive}
         onClick={() => setTime(30)}
       >
         30
       </button>
 
       <button
-        className={time === 60 ? active : inactive}
+        className={mode === "time" && time === 60 ? active : inactive}
         onClick={() => setTime(60)}
       >
         60
       </button>
 
       <button
-        className={time === 120 ? active : inactive}
+        className={mode === "time" && time === 120 ? active : inactive}
         onClick={() => setTime(120)}
       >
         120
@@ -76,28 +76,28 @@ const ToolKit = () => {
 
       {/* Words Mode */}
       <button
-        className={words === 10 ? active : inactive}
+        className={mode === "words" && words === 10 ? active : inactive}
         onClick={() => setWords(10)}
       >
         10
       </button>
 
       <button
-        className={words === 25 ? active : inactive}
+        className={mode === "words" && words === 25 ? active : inactive}
         onClick={() => setWords(25)}
       >
         25
       </button>
 
       <button
-        className={words === 50 ? active : inactive}
+        className={mode === "words" && words === 50 ? active : inactive}
         onClick={() => setWords(50)}
       >
         50
       </button>
 
       <button
-        className={words === 100 ? active : inactive}
+        className={mode === "words" && words === 100 ? active : inactive}
         onClick={() => setWords(100)}
       >
         100

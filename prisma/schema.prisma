@@ -76,7 +76,6 @@ model Verification {
   @@map("verification")
 }
 
-
 model TestResult {
   id          String   @id @default(cuid())
   userId      String
@@ -85,15 +84,19 @@ model TestResult {
   wpm         Int
   rawWpm      Int
   accuracy    Float
+  consistency Float    @default(0) // Add this
   characters  Int
   errors      Int
 
-  mode        String   // "time", "words", "quote", "custom"
-  duration    Int      // 15, 30, 60 etc (in seconds) — always stored even for word tests
+  mode        String   
+  duration    Int      
+  
+  chartData   Json?    //  stores performance over time
 
   createdAt   DateTime @default(now())
   
   @@index([userId])
+  @@index([createdAt]) //  for sorting by date
 }
 
 model UserStats {
@@ -101,15 +104,15 @@ model UserStats {
   userId      String   @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  totalTests  Int      @default(0)
-  bestWpm     Int      @default(0)
-  avgWpm      Float    @default(0)
-  avgAccuracy Float    @default(0)
+  totalTests   Int      @default(0)
+  bestWpm      Int      @default(0)
+  avgWpm       Float    @default(0)
+  avgAccuracy  Float    @default(0)
+  avgConsistency Float  @default(0) 
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
 
 model Friendship {
   id        String   @id @default(cuid())

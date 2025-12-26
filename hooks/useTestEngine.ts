@@ -16,6 +16,18 @@ export function useTestEngine(
   const text = useMemo(() => words.join(" "), [words]);
   const timer = useCountdownTimer(durationSeconds);
   const typing = useTypingEngine(text, timer.start);
+  function calculateConsistency(chartData: ChartDataPoint[]): number {
+    if (chartData.length < 2) return 100;
+
+    const wpms = chartData.map((d) => d.wpm);
+    const avg = wpms.reduce((a, b) => a + b, 0) / wpms.length;
+    const variance =
+      wpms.reduce((sum, wpm) => sum + Math.pow(wpm - avg, 2), 0) / wpms.length;
+    const stdDev = Math.sqrt(variance);
+
+    const consistency = Math.max(0, 100 - (stdDev / avg) * 100);
+    return Math.round(consistency);
+  }
 
   // Set up completion callback
   useEffect(() => {
@@ -100,6 +112,7 @@ export function useTestEngine(
         wpm: 0,
         rawWpm: 0,
         accuracy: 0,
+        consistency: 0,
         rawChars: 0,
         correctChars: 0,
         errors: 0,
@@ -131,12 +144,13 @@ export function useTestEngine(
     const errors = rawChars - correctChars;
 
     const chartData = calculateChartData(typedChars, typedChars[0].timestamp);
-
+    const consistency = calculateConsistency(chartData);
     return {
       wpm,
       rawWpm,
       accuracy,
       rawChars,
+      consistency,
       correctChars,
       errors,
       chartData,

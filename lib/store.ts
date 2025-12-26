@@ -27,7 +27,7 @@ export const useKeyboardUIStore = create<keyboardStore>((set) => ({
 export const useToolkitStore = create<ToolkitStore>((set) => ({
   mode: "time", // Default to time mode
   time: 15,
-  words: 15,
+  words: 10,
   punctuation: false,
   number: false,
   setMode: (mode: "time" | "words") => set(() => ({ mode })),

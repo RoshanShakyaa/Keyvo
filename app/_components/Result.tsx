@@ -23,6 +23,7 @@ export const Results = ({
   wpm,
   rawWpm,
   accuracy,
+  consistency,
   errors,
   chartData,
   onRestart,
@@ -30,6 +31,7 @@ export const Results = ({
   wpm: number;
   rawWpm: number;
   accuracy: number;
+  consistency: number;
   errors: number;
   chartData: ChartDataPoint[];
   onRestart: () => void;
@@ -61,20 +63,6 @@ export const Results = ({
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [onRestart]);
-
-  // Calculate consistency
-  const calculateConsistency = () => {
-    if (chartData.length < 2) return 100;
-
-    const wpms = chartData.map((d) => d.wpm);
-    const avg = wpms.reduce((a, b) => a + b, 0) / wpms.length;
-    const variance =
-      wpms.reduce((sum, wpm) => sum + Math.pow(wpm - avg, 2), 0) / wpms.length;
-    const stdDev = Math.sqrt(variance);
-
-    const consistency = Math.max(0, 100 - (stdDev / avg) * 100);
-    return Math.round(consistency);
-  };
 
   return (
     <motion.div
@@ -154,9 +142,7 @@ export const Results = ({
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="p-4 rounded-lg bg-card/50 border border-border/50">
           <p className="text-muted-foreground text-xs mb-1">consistency</p>
-          <p className="text-2xl font-semibold text-primary">
-            {calculateConsistency()}%
-          </p>
+          <p className="text-2xl font-semibold text-primary">{consistency}%</p>
         </div>
         <div className="p-4 rounded-lg bg-card/50 border border-border/50">
           <p className="text-muted-foreground text-xs mb-1">time</p>

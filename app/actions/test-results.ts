@@ -2,7 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { success } from "zod";
+import { headers } from "next/headers";
 
 type SaveTestResultInput = {
   wpm: number;
@@ -30,7 +30,7 @@ export async function saveTestResult(data: SaveTestResultInput) {
     chartData,
   } = data;
   try {
-    const session = await auth.api.getSession();
+    const session = await auth.api.getSession({ headers: await headers() });
 
     if (!session?.user.id) {
       return { success: false, error: "Not authentication" };

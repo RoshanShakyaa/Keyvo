@@ -9,6 +9,7 @@ import { RotateCw } from "lucide-react";
 import ToolKit from "./ToolKit";
 import KeyboardUI from "@/components/KeyboardUI";
 import { useToolkitStore } from "@/lib/store";
+import { saveTestResult } from "../actions/test-results";
 
 const TypingTestCore = ({
   time,
@@ -41,6 +42,30 @@ const TypingTestCore = ({
     setScrollOffset(0);
   }, [reset, onRegenerate]);
 
+  useEffect(() => {
+    if (results) {
+      // Auto-save results when test finishes
+      const totalChars =
+        results.chartData.length > 0
+          ? Math.round(results.chartData[results.chartData.length - 1].raw * 5)
+          : 0;
+
+      saveTestResult({
+        wpm: results.wpm,
+        rawWpm: results.rawWpm,
+        accuracy: results.accuracy,
+        consistency: results.consistency,
+        characters: totalChars,
+        errors: results.errors,
+        mode,
+        duration: time,
+        chartData: results.chartData,
+      }).catch((err) => {
+        console.error("Failed to save result:", err);
+        // Silent fail - don't interrupt user experience
+      });
+    }
+  }, [results, mode, time]);
   useEffect(() => {
     const currentChar = charRefs.current[typing.caret];
 
@@ -105,6 +130,7 @@ const TypingTestCore = ({
           wpm={results.wpm}
           rawWpm={results.rawWpm}
           accuracy={results.accuracy}
+          consistency={results.consistency}
           errors={results.errors}
           chartData={results.chartData}
           onRestart={handleRestart}

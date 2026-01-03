@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ThemeProvider } from "@/components/ui/theme-provider";
-
+import Providers from "@/components/Provider";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -36,9 +36,11 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Navbar />
+            <Providers>
+              <Navbar />
 
-            {children}
+              {children}
+            </Providers>
           </ThemeProvider>
           <div className="footer text-center h-20">hellow my foot</div>
         </div>

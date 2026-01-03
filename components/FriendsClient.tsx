@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
 import {
   Users,
   UserPlus,
@@ -10,45 +12,42 @@ import {
   Check,
   Swords,
   UsersRound,
-  Trophy,
   Clock,
 } from "lucide-react";
+
 import {
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
   removeFriend,
   searchUsers,
-  Friend,
-  PendingRequest,
-  SentRequest,
-  SearchUser,
+  type SearchUser,
 } from "@/app/actions/friendship";
-import { useRouter } from "next/navigation";
+import {
+  createFriendsQueryOptions,
+  createPendingRequestsQueryOptions,
+  createSentRequestsQueryOptions,
+} from "@/hooks/useQueryOptions";
 
-type Props = {
-  initialFriends: Friend[];
-  initialPendingRequests: PendingRequest[];
-  initialSentRequests: SentRequest[];
-};
-
-export default function FriendsClient({
-  initialFriends,
-  initialPendingRequests,
-  initialSentRequests,
-}: Props) {
-  const router = useRouter();
-  const [friends, setFriends] = useState(initialFriends);
-  const [pendingRequests, setPendingRequests] = useState(
-    initialPendingRequests
-  );
-  const [sentRequests, setSentRequests] = useState(initialSentRequests);
+export default function FriendsClient() {
+  const queryClient = useQueryClient();
+  const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [activeTab, setActiveTab] = useState<"friends" | "requests" | "search">(
     "friends"
   );
-  const [isPending, startTransition] = useTransition();
+
+  // Queries
+  const { data: friendsData } = useQuery(createFriendsQueryOptions());
+  const { data: pendingData } = useQuery(createPendingRequestsQueryOptions());
+  const { data: sentData } = useQuery(createSentRequestsQueryOptions());
+
+  const friends = friendsData?.friends ?? [];
+  const pendingRequests = pendingData?.requests ?? [];
+  const sentRequests = sentData?.requests ?? [];
+
+  /* ---------- ACTIONS ---------- */
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
@@ -65,8 +64,9 @@ export default function FriendsClient({
     startTransition(async () => {
       const result = await sendFriendRequest(userId);
       if (result.success) {
-        // Refresh search results
-        handleSearch();
+        // Refresh search and sent requests
+        await handleSearch();
+        queryClient.invalidateQueries({ queryKey: ["sentRequests"] });
       }
     });
   };
@@ -75,7 +75,9 @@ export default function FriendsClient({
     startTransition(async () => {
       const result = await acceptFriendRequest(friendshipId);
       if (result.success) {
-        router.refresh();
+        // Refresh friends and pending requests
+        queryClient.invalidateQueries({ queryKey: ["friends"] });
+        queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
       }
     });
   };
@@ -84,9 +86,7 @@ export default function FriendsClient({
     startTransition(async () => {
       const result = await declineFriendRequest(friendshipId);
       if (result.success) {
-        setPendingRequests((prev) =>
-          prev.filter((r) => r.friendshipId !== friendshipId)
-        );
+        queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
       }
     });
   };
@@ -97,21 +97,22 @@ export default function FriendsClient({
     startTransition(async () => {
       const result = await removeFriend(friendshipId);
       if (result.success) {
-        setFriends((prev) =>
-          prev.filter((f) => f.friendshipId !== friendshipId)
-        );
+        queryClient.invalidateQueries({ queryKey: ["friends"] });
       }
     });
   };
 
-  const getInitials = (name: string) => {
-    return name
+  /* ---------- HELPERS ---------- */
+
+  const getInitials = (name: string) =>
+    name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+
+  /* ---------- UI ---------- */
 
   return (
     <div className="space-y-6">
@@ -144,13 +145,12 @@ export default function FriendsClient({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold">
               Your Friends ({friends.length})
             </h2>
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
               <UsersRound className="size-4" />
               Create Race Lobby
             </button>
@@ -158,11 +158,11 @@ export default function FriendsClient({
 
           {friends.length === 0 ? (
             <div className="bg-card border rounded-lg p-12 text-center">
-              <Users className="size-12 text-muted-foreground mx-auto mb-4" />
+              <Users className="size-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">No friends yet</p>
               <button
                 onClick={() => setActiveTab("search")}
-                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
               >
                 Find Friends
               </button>
@@ -170,11 +170,9 @@ export default function FriendsClient({
           ) : (
             <div className="grid gap-4">
               {friends.map((friend) => (
-                <motion.div
+                <div
                   key={friend.friendshipId}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-card border rounded-lg p-4 flex items-center justify-between hover:border-primary/50 transition-colors"
+                  className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
@@ -203,23 +201,20 @@ export default function FriendsClient({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors flex items-center gap-2"
-                      title="Challenge to 1v1"
-                    >
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-2">
                       <Swords className="size-4" />
                       Race
                     </button>
                     <button
                       onClick={() => handleRemoveFriend(friend.friendshipId)}
-                      className="p-2 text-muted-foreground hover:text-destructive transition-colors"
-                      title="Remove friend"
+                      disabled={isPending}
+                      className="p-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
                     >
                       <X className="size-4" />
                     </button>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
           )}
@@ -238,67 +233,62 @@ export default function FriendsClient({
             <h2 className="text-xl font-semibold mb-4">
               Pending Requests ({pendingRequests.length})
             </h2>
+
             {pendingRequests.length === 0 ? (
               <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
                 No pending requests
               </div>
             ) : (
               <div className="space-y-4">
-                {pendingRequests.map((request) => (
-                  <motion.div
-                    key={request.friendshipId}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-card border rounded-lg p-4 flex items-center justify-between"
+                {pendingRequests.map((req) => (
+                  <div
+                    key={req.friendshipId}
+                    className="bg-card border rounded-lg p-4 flex justify-between items-center"
                   >
                     <div className="flex items-center gap-4">
                       <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                        {request.image ? (
+                        {req.image ? (
                           <img
-                            src={request.image}
-                            alt={request.name}
+                            src={req.image}
+                            alt={req.name}
                             className="size-12 rounded-full"
                           />
                         ) : (
-                          getInitials(request.name)
+                          getInitials(req.name)
                         )}
                       </div>
                       <div>
-                        <div className="font-semibold">{request.name}</div>
-                        {request.stats && (
+                        <div className="font-semibold">{req.name}</div>
+                        {req.stats && (
                           <div className="text-sm text-muted-foreground">
-                            Best: {request.stats.bestWpm} WPM
+                            Best: {req.stats.bestWpm} WPM
                           </div>
                         )}
                         <div className="text-xs text-muted-foreground">
-                          <Clock className="size-3 inline mr-1" />
-                          {new Date(request.requestedAt).toLocaleDateString()}
+                          <Clock className="inline size-3 mr-1" />
+                          {new Date(req.requestedAt).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex gap-2">
                       <button
-                        onClick={() =>
-                          handleAcceptRequest(request.friendshipId)
-                        }
+                        onClick={() => handleAcceptRequest(req.friendshipId)}
                         disabled={isPending}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex gap-2 disabled:opacity-50"
                       >
                         <Check className="size-4" />
                         Accept
                       </button>
                       <button
-                        onClick={() =>
-                          handleDeclineRequest(request.friendshipId)
-                        }
+                        onClick={() => handleDeclineRequest(req.friendshipId)}
                         disabled={isPending}
-                        className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                        className="p-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
                       >
                         <X className="size-4" />
                       </button>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             )}
@@ -309,34 +299,36 @@ export default function FriendsClient({
             <h2 className="text-xl font-semibold mb-4">
               Sent Requests ({sentRequests.length})
             </h2>
+
             {sentRequests.length === 0 ? (
               <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
                 No sent requests
               </div>
             ) : (
               <div className="space-y-4">
-                {sentRequests.map((request) => (
+                {sentRequests.map((req) => (
                   <div
-                    key={request.friendshipId}
-                    className="bg-card border rounded-lg p-4 flex items-center justify-between opacity-70"
+                    key={req.friendshipId}
+                    className="bg-card border rounded-lg p-4 flex items-center gap-4 opacity-70"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                        {request.image ? (
-                          <img
-                            src={request.image}
-                            alt={request.name}
-                            className="size-12 rounded-full"
-                          />
-                        ) : (
-                          getInitials(request.name)
-                        )}
+                    <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
+                      {req.image ? (
+                        <img
+                          src={req.image}
+                          alt={req.name}
+                          className="size-12 rounded-full"
+                        />
+                      ) : (
+                        getInitials(req.name)
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-semibold">{req.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Request pending...
                       </div>
-                      <div>
-                        <div className="font-semibold">{request.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Request pending...
-                        </div>
+                      <div className="text-xs text-muted-foreground">
+                        Sent {new Date(req.requestedAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
@@ -352,35 +344,33 @@ export default function FriendsClient({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
         >
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
               <input
-                type="text"
-                placeholder="Search by name or email..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Search by name or email..."
                 className="w-full pl-10 pr-4 py-2 bg-card border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <button
               onClick={handleSearch}
               disabled={isPending || searchQuery.trim().length < 2}
-              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50"
             >
               Search
             </button>
           </div>
 
-          {searchResults.length > 0 && (
+          {searchResults.length > 0 ? (
             <div className="space-y-4">
               {searchResults.map((user) => (
                 <div
                   key={user.userId}
-                  className="bg-card border rounded-lg p-4 flex items-center justify-between"
+                  className="bg-card border rounded-lg p-4 flex justify-between items-center"
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
@@ -421,7 +411,7 @@ export default function FriendsClient({
                       <button
                         onClick={() => handleSendRequest(user.userId)}
                         disabled={isPending}
-                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50"
                       >
                         <UserPlus className="size-4" />
                         Add Friend
@@ -431,12 +421,20 @@ export default function FriendsClient({
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="bg-card border rounded-lg p-8 text-center text-muted-foreground">
+              {searchQuery.trim().length >= 2
+                ? "No users found"
+                : "Enter a name or email to search"}
+            </div>
           )}
         </motion.div>
       )}
     </div>
   );
 }
+
+/* ---------------------------------- */
 
 function TabButton({
   active,

@@ -2,6 +2,20 @@
 
 import { prisma } from "@/lib/prisma";
 
+// Common leaderboard entry type
+export type LeaderboardEntry = {
+  rank: number;
+  userId: string;
+  name: string;
+  image: string | null;
+  bestWpm: number;
+  avgWpm: number;
+  avgAccuracy: number;
+  avgConsistency: number;
+  totalTests: number;
+  lastActive: Date;
+};
+
 export async function getLeaderboard(
   sortBy: "bestWpm" | "avgWpm" | "totalTests" = "bestWpm",
   limit: number = 50
@@ -10,7 +24,7 @@ export async function getLeaderboard(
     const leaderboard = await prisma.userStats.findMany({
       where: {
         totalTests: {
-          gte: 5, // Only show users with at least 5 tests (prevents one-hit wonders)
+          gte: 5,
         },
       },
       select: {
@@ -18,7 +32,7 @@ export async function getLeaderboard(
           select: {
             id: true,
             name: true,
-            image: true, // For avatar
+            image: true,
             createdAt: true,
           },
         },
@@ -27,7 +41,7 @@ export async function getLeaderboard(
         avgAccuracy: true,
         avgConsistency: true,
         totalTests: true,
-        updatedAt: true, // When they last tested
+        updatedAt: true,
       },
       orderBy: {
         [sortBy]: "desc",
@@ -35,20 +49,20 @@ export async function getLeaderboard(
       take: limit,
     });
 
-    // Add rank to each entry
-    const rankedLeaderboard = leaderboard.map((entry, index) => ({
-      rank: index + 1,
-      userId: entry.user.id,
-      name: entry.user.name || "Anonymous",
-      image: entry.user.image,
-      joinedAt: entry.user.createdAt,
-      bestWpm: entry.bestWpm,
-      avgWpm: Math.round(entry.avgWpm),
-      avgAccuracy: Math.round(entry.avgAccuracy),
-      avgConsistency: Math.round(entry.avgConsistency),
-      totalTests: entry.totalTests,
-      lastActive: entry.updatedAt,
-    }));
+    const rankedLeaderboard: LeaderboardEntry[] = leaderboard.map(
+      (entry, index) => ({
+        rank: index + 1,
+        userId: entry.user.id,
+        name: entry.user.name || "Anonymous",
+        image: entry.user.image,
+        bestWpm: entry.bestWpm,
+        avgWpm: Math.round(entry.avgWpm),
+        avgAccuracy: Math.round(entry.avgAccuracy),
+        avgConsistency: Math.round(entry.avgConsistency),
+        totalTests: entry.totalTests,
+        lastActive: entry.updatedAt,
+      })
+    );
 
     return { success: true, leaderboard: rankedLeaderboard };
   } catch (error) {
@@ -57,7 +71,6 @@ export async function getLeaderboard(
   }
 }
 
-// Get user's position in leaderboard
 export async function getUserLeaderboardPosition(userId: string) {
   try {
     const userStats = await prisma.userStats.findUnique({
@@ -69,7 +82,6 @@ export async function getUserLeaderboardPosition(userId: string) {
       return { success: true, position: null };
     }
 
-    // Count how many users have better WPM
     const betterUsers = await prisma.userStats.count({
       where: {
         bestWpm: {
@@ -90,17 +102,15 @@ export async function getUserLeaderboardPosition(userId: string) {
   }
 }
 
-// Get leaderboard with filters (time period, mode)
 export async function getFilteredLeaderboard(filters: {
   mode?: "time" | "words";
-  duration?: number; // 15, 30, 60, 120
+  duration?: number;
   timeRange?: "today" | "week" | "month" | "all";
   limit?: number;
 }) {
   try {
     const { mode, duration, timeRange = "all", limit = 50 } = filters;
 
-    // Build date filter
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let dateFilter: any = {};
     if (timeRange !== "all") {
@@ -114,7 +124,6 @@ export async function getFilteredLeaderboard(filters: {
       }
     }
 
-    // Get best result per user with filters
     const results = await prisma.testResult.groupBy({
       by: ["userId"],
       where: {
@@ -139,7 +148,6 @@ export async function getFilteredLeaderboard(filters: {
       take: limit,
     });
 
-    // Fetch user details
     const leaderboard = await Promise.all(
       results.map(async (result, index) => {
         const user = await prisma.user.findUnique({
@@ -151,15 +159,19 @@ export async function getFilteredLeaderboard(filters: {
           },
         });
 
+        // Return normalized LeaderboardEntry format
         return {
           rank: index + 1,
           userId: result.userId,
           name: user?.name || "Anonymous",
-          image: user?.image,
-          wpm: result._max.wpm || 0,
+          image: user?.image || null,
+          bestWpm: result._max.wpm || 0,
+          avgWpm: result._max.wpm || 0, // Filtered results only have max
           avgAccuracy: Math.round(result._avg.accuracy || 0),
-          testCount: result._count.id,
-        };
+          avgConsistency: 0, // Not available in filtered results
+          totalTests: result._count.id,
+          lastActive: new Date(), // Not available in filtered results
+        } as LeaderboardEntry;
       })
     );
 
@@ -169,7 +181,3 @@ export async function getFilteredLeaderboard(filters: {
     return { success: false, error: "Failed to fetch leaderboard" };
   }
 }
-
-export type LeaderboardEntryType = Awaited<
-  ReturnType<typeof getFilteredLeaderboard>
->;

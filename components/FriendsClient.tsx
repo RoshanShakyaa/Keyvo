@@ -28,6 +28,8 @@ import {
   createPendingRequestsQueryOptions,
   createSentRequestsQueryOptions,
 } from "@/hooks/useQueryOptions";
+import { CreateRaceButton } from "./CreateRaceButton";
+import { JoinRaceButton } from "./JoinRaceButton";
 
 export default function FriendsClient() {
   const queryClient = useQueryClient();
@@ -116,6 +118,8 @@ export default function FriendsClient() {
 
   return (
     <div className="space-y-6">
+      <CreateRaceButton />
+      <JoinRaceButton />
       {/* Tabs */}
       <div className="flex gap-2 border-b">
         <TabButton
@@ -176,15 +180,7 @@ export default function FriendsClient() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {friend.image ? (
-                        <img
-                          src={friend.image}
-                          alt={friend.name}
-                          className="size-12 rounded-full"
-                        />
-                      ) : (
-                        getInitials(friend.name)
-                      )}
+                      {getInitials(friend.name)}
                     </div>
                     <div>
                       <div className="font-semibold">{friend.name}</div>
@@ -247,15 +243,7 @@ export default function FriendsClient() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                        {req.image ? (
-                          <img
-                            src={req.image}
-                            alt={req.name}
-                            className="size-12 rounded-full"
-                          />
-                        ) : (
-                          getInitials(req.name)
-                        )}
+                        {getInitials(req.name)}
                       </div>
                       <div>
                         <div className="font-semibold">{req.name}</div>
@@ -312,15 +300,7 @@ export default function FriendsClient() {
                     className="bg-card border rounded-lg p-4 flex items-center gap-4 opacity-70"
                   >
                     <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {req.image ? (
-                        <img
-                          src={req.image}
-                          alt={req.name}
-                          className="size-12 rounded-full"
-                        />
-                      ) : (
-                        getInitials(req.name)
-                      )}
+                      {getInitials(req.name)}
                     </div>
                     <div>
                       <div className="font-semibold">{req.name}</div>
@@ -374,15 +354,7 @@ export default function FriendsClient() {
                 >
                   <div className="flex items-center gap-4">
                     <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {user.image ? (
-                        <img
-                          src={user.image}
-                          alt={user.name}
-                          className="size-12 rounded-full"
-                        />
-                      ) : (
-                        getInitials(user.name)
-                      )}
+                      {getInitials(user.name)}
                     </div>
                     <div>
                       <div className="font-semibold">{user.name}</div>

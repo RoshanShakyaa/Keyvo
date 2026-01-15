@@ -21,6 +21,8 @@ model User {
   accounts      Account[]
   results       TestResult[]
   stats         UserStats[]
+   hostedRaces      Race[]            @relation("HostedRaces")
+  raceParticipants RaceParticipant[]
 
   requestedFriends Friendship[] @relation("RequestedFriends")
   receivedFriends  Friendship[] @relation("ReceivedFriends")
@@ -127,7 +129,69 @@ model Friendship {
   @@index([requesterId])
   @@index([addresseeId])
 }
+model Race {
+  id          String     @id @default(cuid())
+  code        String     @unique
 
+  hostId      String
+  host        User       @relation("HostedRaces", fields: [hostId], references: [id])
+
+  // ---------- SETTINGS (HOST CONTROLS THESE) ----------
+  mode        RaceMode   @default(TIME)   // TIME | WORDS
+  duration    Int        @default(30)      // seconds (used if mode = TIME)
+  wordCount   Int        @default(100)     // used if mode = WORDS
+  maxPlayers  Int        @default(5)
+
+  // ---------- GENERATED ON START ----------
+  words       Json?      // NULL until host starts race
+
+  // ---------- RUNTIME STATE ----------
+  status      RaceStatus @default(LOBBY)  // LOBBY → COUNTDOWN → RACING → FINISHED
+  startTime   DateTime?
+  endTime     DateTime?
+
+  participants RaceParticipant[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([code])
+  @@index([status])
+}
+model RaceParticipant {
+  id          String   @id @default(cuid())
+
+  raceId      String
+  race        Race     @relation(fields: [raceId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  progress    Int      @default(0) // FINAL characters typed
+  wpm         Int    @default(0)
+  accuracy    Int?
+
+  position    Int?     // Server-calculated final placement
+  finished    Boolean  @default(false)
+  finishedAt  DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([raceId, userId])
+  @@index([raceId])
+}
+
+enum RaceStatus {
+  LOBBY      // Lobby waiting for players
+  COUNTDOWN    // 3...2...1...GO!
+  RACING       // Race in progress
+  FINISHED     // Race completed
+}
+enum RaceMode {
+  TIME
+  WORDS
+}
 enum FriendshipStatus {
   PENDING
   ACCEPTED

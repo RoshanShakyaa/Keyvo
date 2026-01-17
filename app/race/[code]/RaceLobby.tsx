@@ -40,7 +40,6 @@ export default function RaceCore({
   userId,
   userName,
 }: RaceCoreProps) {
-  // --- ABLY & RACE STATE ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [presenceSet, setPresenceSet] = useState<any[]>([]);
   const [otherProgress, setOtherProgress] = useState<

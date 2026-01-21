@@ -11,7 +11,7 @@ type ChartDataPoint = {
 export function useTestEngine(
   words: string[],
   durationSeconds: number,
-  mode: "time" | "words"
+  mode: "time" | "words",
 ) {
   const text = useMemo(() => words.join(" "), [words]);
   const timer = useCountdownTimer(durationSeconds);
@@ -59,7 +59,7 @@ export function useTestEngine(
   const calculateChartData = useCallback(
     (
       typedChars: typeof typing.typedChars,
-      testStartTime: number
+      testStartTime: number,
     ): ChartDataPoint[] => {
       if (typedChars.length === 0) return [];
 
@@ -68,13 +68,13 @@ export function useTestEngine(
       // Calculate data for each second that has elapsed
       const lastCharTime = typedChars[typedChars.length - 1].timestamp;
       const totalElapsedSeconds = Math.ceil(
-        (lastCharTime - testStartTime) / 1000
+        (lastCharTime - testStartTime) / 1000,
       );
 
       for (let second = 1; second <= totalElapsedSeconds; second++) {
         const timeThreshold = testStartTime + second * 1000;
         const charsAtTime = typedChars.filter(
-          (c) => c.timestamp <= timeThreshold
+          (c) => c.timestamp <= timeThreshold,
         );
 
         if (charsAtTime.length === 0) {
@@ -99,7 +99,7 @@ export function useTestEngine(
 
       return data;
     },
-    []
+    [],
   );
 
   const results = useMemo(() => {

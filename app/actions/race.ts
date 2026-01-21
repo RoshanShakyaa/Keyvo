@@ -3,6 +3,7 @@
 import { getRandomWords } from "@/lib/words";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/get-session";
+import { RaceDTO } from "@/lib/types";
 
 function generateRaceCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -13,6 +14,12 @@ function generateRaceCode(): string {
   return code;
 }
 
+export type RaceSettings = {
+  duration: number; // 30, 60, or 120 seconds
+  punctuation: boolean;
+  numbers: boolean;
+};
+
 export async function createRace(settings: RaceSettings) {
   const session = await getServerSession();
   if (!session?.user) throw new Error("Unauthorized");
@@ -22,7 +29,12 @@ export async function createRace(settings: RaceSettings) {
     code = generateRaceCode();
   }
 
-  const wordCount = settings.mode === "WORDS" ? settings.wordCount ?? 50 : 100;
+  // Generate words based on duration
+  // Rule: Average typist does ~40 WPM, so for 60s = 40 words
+  const duration = settings.duration;
+  let wordCount = Math.ceil((duration / 60) * 40);
+  // Add 50% buffer so fast typists don't run out of words
+  wordCount = Math.ceil(wordCount * 1.5);
 
   const words = getRandomWords(wordCount, {
     punctuation: settings.punctuation,
@@ -33,13 +45,13 @@ export async function createRace(settings: RaceSettings) {
     data: {
       code,
       hostId: session.user.id,
-      mode: settings.mode,
-      duration: settings.duration ?? 60,
+      duration,
       words,
       status: "LOBBY",
     },
   });
 
+  // Automatically add host as first participant
   await prisma.raceParticipant.create({
     data: {
       raceId: race.id,
@@ -55,7 +67,7 @@ function parseWords(words: unknown): string[] {
   return words.filter((w): w is string => typeof w === "string");
 }
 
-export async function getRace(code: string) {
+export async function getRace(code: string): Promise<RaceDTO> {
   const race = await prisma.race.findUnique({
     where: { code },
     include: {
@@ -64,6 +76,10 @@ export async function getRace(code: string) {
         include: {
           user: { select: { id: true, name: true } },
         },
+        orderBy: [
+          { finished: "desc" }, // Finished players first
+          { wpm: "desc" }, // Then by WPM
+        ],
       },
     },
   });
@@ -76,10 +92,11 @@ export async function getRace(code: string) {
     hostId: race.hostId,
     host: race.host,
     participants: race.participants,
-    mode: race.mode,
     duration: race.duration,
     status: race.status,
-    words: parseWords(race.words), // ✅ string[]
+    words: parseWords(race.words),
+    startTime: race.startTime?.toISOString(),
+    endTime: race.endTime?.toISOString(),
   };
 }
 
@@ -98,7 +115,7 @@ export async function joinRace(code: string) {
     throw new Error("Race is full");
 
   const alreadyJoined = race.participants.some(
-    (p) => p.userId === session.user.id
+    (p) => p.userId === session.user.id,
   );
 
   if (!alreadyJoined) {
@@ -113,10 +130,116 @@ export async function joinRace(code: string) {
   return { raceId: race.id };
 }
 
-export type RaceSettings = {
-  mode: "TIME" | "WORDS";
-  duration?: number;
-  wordCount?: number;
-  punctuation: boolean;
-  numbers: boolean;
-};
+export async function startRace(code: string) {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const race = await prisma.race.findUnique({
+    where: { code },
+  });
+
+  if (!race) throw new Error("Race not found");
+  if (race.hostId !== session.user.id)
+    throw new Error("Only host can start race");
+  if (race.status !== "LOBBY") throw new Error("Race already started");
+
+  await prisma.race.update({
+    where: { code },
+    data: {
+      status: "COUNTDOWN",
+      startTime: new Date(),
+    },
+  });
+
+  return { success: true };
+}
+
+export async function updateProgress(
+  code: string,
+  stats: {
+    progress: number;
+    wpm: number;
+    accuracy: number;
+  },
+) {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  await prisma.raceParticipant.update({
+    where: {
+      raceId_userId: {
+        raceId: (await prisma.race.findUnique({ where: { code } }))!.id,
+        userId: session.user.id,
+      },
+    },
+    data: {
+      progress: stats.progress,
+      wpm: Math.round(stats.wpm),
+      accuracy: Math.round(stats.accuracy),
+    },
+  });
+
+  return { success: true };
+}
+
+export async function finishRace(
+  code: string,
+  stats: {
+    progress: number;
+    wpm: number;
+    accuracy: number;
+  },
+) {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const race = await prisma.race.findUnique({
+    where: { code },
+  });
+
+  if (!race) throw new Error("Race not found");
+
+  await prisma.raceParticipant.update({
+    where: {
+      raceId_userId: {
+        raceId: race.id,
+        userId: session.user.id,
+      },
+    },
+    data: {
+      progress: stats.progress,
+      wpm: Math.round(stats.wpm),
+      accuracy: Math.round(stats.accuracy),
+      finished: true,
+      finishedAt: new Date(),
+    },
+  });
+
+  // Note: Race doesn't end when first person finishes
+  // It ends when the timer expires (handled client-side or by a separate endRace action)
+
+  return { success: true };
+}
+
+export async function endRace(code: string) {
+  const session = await getServerSession();
+  if (!session?.user) throw new Error("Unauthorized");
+
+  const race = await prisma.race.findUnique({
+    where: { code },
+  });
+
+  if (!race) throw new Error("Race not found");
+  if (race.hostId !== session.user.id)
+    throw new Error("Only host can end race");
+
+  await prisma.race.update({
+    where: { code },
+    data: {
+      status: "FINISHED",
+      endTime: new Date(),
+    },
+  });
+
+  return { success: true };
+}

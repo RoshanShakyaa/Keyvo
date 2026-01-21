@@ -1,8 +1,10 @@
-import { getRace } from "@/app/(auth)/actions/race";
+// app/race/[code]/page.tsx
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import RaceCore from "./RaceLobby";
+import { RaceDTO } from "@/lib/types";
+import { getRace } from "@/app/actions/race";
+import { RaceCore } from "./RaceLobby";
 
 export default async function RacePage({
   params,
@@ -19,7 +21,7 @@ export default async function RacePage({
     redirect("/login");
   }
 
-  let race;
+  let race: RaceDTO | null;
   try {
     race = await getRace(code);
   } catch (e) {
@@ -42,6 +44,7 @@ export default async function RacePage({
   return (
     <div className="container mx-auto px-4 py-8">
       <RaceCore
+        duration={race.duration}
         words={race.words}
         raceCode={race.code}
         isHost={isHost}

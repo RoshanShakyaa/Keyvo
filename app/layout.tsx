@@ -42,7 +42,6 @@ export default function RootLayout({
               {children}
             </Providers>
           </ThemeProvider>
-          <div className="footer text-center h-20">hellow my foot</div>
         </div>
       </body>
     </html>

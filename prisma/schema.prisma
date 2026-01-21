@@ -136,17 +136,15 @@ model Race {
   hostId      String
   host        User       @relation("HostedRaces", fields: [hostId], references: [id])
 
-  // ---------- SETTINGS (HOST CONTROLS THESE) ----------
-  mode        RaceMode   @default(TIME)   // TIME | WORDS
-  duration    Int        @default(30)      // seconds (used if mode = TIME)
-  wordCount   Int        @default(100)     // used if mode = WORDS
+  // ---------- SETTINGS ----------
+  duration    Int        @default(60)      // Always used for multiplayer
   maxPlayers  Int        @default(5)
 
   // ---------- GENERATED ON START ----------
-  words       Json?      // NULL until host starts race
+  words       Json?
 
   // ---------- RUNTIME STATE ----------
-  status      RaceStatus @default(LOBBY)  // LOBBY → COUNTDOWN → RACING → FINISHED
+  status      RaceStatus @default(LOBBY)
   startTime   DateTime?
   endTime     DateTime?
 
@@ -158,6 +156,8 @@ model Race {
   @@index([code])
   @@index([status])
 }
+
+
 model RaceParticipant {
   id          String   @id @default(cuid())
 
@@ -188,10 +188,7 @@ enum RaceStatus {
   RACING       // Race in progress
   FINISHED     // Race completed
 }
-enum RaceMode {
-  TIME
-  WORDS
-}
+
 enum FriendshipStatus {
   PENDING
   ACCEPTED

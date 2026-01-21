@@ -1,128 +1,141 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import {
-  BaseRealtime,
-  WebSocketTransport,
-  FetchRequest,
-  RealtimePresence,
-} from "ably/modular";
-// Import Types separately to avoid local declaration conflicts
-import type { RealtimeChannel } from "ably";
+import { Check, Copy, Crown, Users } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import * as Ably from "ably";
+import type { PresenceMessage } from "ably";
 import { useTestEngine } from "@/hooks/useTestEngine";
+import { RACER_COLORS } from "@/lib/types";
 import KeyboardUI from "@/components/KeyboardUI";
-import { Results } from "@/app/_components/Result";
-import { Copy, Check, Users } from "lucide-react";
+import { finishRace, updateProgress } from "@/app/actions/race";
+import { Caret } from "./_components/MultiplayerCaret";
 
-const RACER_COLORS = [
-  "#3B82F6",
-  "#10B981",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-  "#F97316",
-];
-
-interface RaceCoreProps {
-  words: string[];
+type RaceCoreProps = {
   raceCode: string;
+  words: string[];
   isHost: boolean;
   userId: string;
   userName: string;
-}
+  duration: number;
+};
 
-export default function RaceCore({
-  words,
+export function RaceCore({
   raceCode,
+  words,
   isHost,
   userId,
   userName,
+  duration,
 }: RaceCoreProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [presenceSet, setPresenceSet] = useState<any[]>([]);
-  const [otherProgress, setOtherProgress] = useState<
-    Record<string, { caret: number; wpm: number }>
-  >({});
-  const [status, setStatus] = useState<
-    "WAITING" | "COUNTDOWN" | "RACING" | "FINISHED"
-  >("WAITING");
-  const [countdown, setCountdown] = useState(3);
   const [copied, setCopied] = useState(false);
+  const [presenceSet, setPresenceSet] = useState<PresenceMessage[]>([]);
+  const [status, setStatus] = useState<
+    "LOBBY" | "COUNTDOWN" | "RACING" | "FINISHED"
+  >("LOBBY");
+  const [countdown, setCountdown] = useState(3);
+  const [otherProgress, setOtherProgress] = useState<
+    Record<string, { caret: number; wpm: number; finished: boolean }>
+  >({});
+  const [finalResults, setFinalResults] = useState<
+    Array<{ name: string; wpm: number; accuracy: number; clientId: string }>
+  >([]);
 
-  // --- TYPING ENGINE ---
-  const { text, typing, timer, results } = useTestEngine(words, 60, "time");
+  const channelRef = useRef<Ably.RealtimeChannel | null>(null);
+  const hasFinishedRef = useRef(false);
+  const { text, typing, timer, results } = useTestEngine(
+    words,
+    duration,
+    "time",
+  );
 
-  // --- REFS & COORDINATES ---
-  // Use Types.RealtimeChannelPromise for the channel ref
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const ablyClientRef = useRef<BaseRealtime | null>(null);
   const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
-  const [caretCoords, setCaretCoords] = useState<
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textWrapperRef = useRef<HTMLDivElement>(null);
+  const [caretPos, setCaretPos] = useState({ top: 0, left: 0 });
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const [otherCaretPositions, setOtherCaretPositions] = useState<
     Record<string, { top: number; left: number }>
   >({});
 
-  // --- CALC POSITIONS ---
+  const copyCode = () => {
+    navigator.clipboard.writeText(raceCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const getPlayerColor = (clientId: string) => {
+    const index = presenceSet.findIndex((p) => p.clientId === clientId);
+    return RACER_COLORS[index % RACER_COLORS.length];
+  };
+
+  // Handle finish - use callback to avoid setState in effect
   useEffect(() => {
-    const updateCoords = () => {
-      const newCoords: Record<string, { top: number; left: number }> = {};
-      const getPos = (index: number) => {
-        const el = charRefs.current[index];
-        if (!el || !el.parentElement) return null;
-        const rect = el.getBoundingClientRect();
-        const parentRect = el.parentElement.getBoundingClientRect();
-        return {
-          top: rect.top - parentRect.top,
-          left: rect.left - parentRect.left,
-        };
-      };
+    if (results && status === "RACING" && !hasFinishedRef.current) {
+      hasFinishedRef.current = true;
 
-      const myPos = getPos(typing.caret);
-      if (myPos) newCoords[userId] = myPos;
+      const totalTyped = typing.typedChars.length;
+      const accuracy =
+        totalTyped > 0
+          ? Math.round((typing.correctChars / totalTyped) * 100)
+          : 0;
 
-      Object.entries(otherProgress).forEach(([pId, data]) => {
-        const pos = getPos(data.caret);
-        if (pos) newCoords[pId] = pos;
+      // Save to database
+      finishRace(raceCode, {
+        progress: typing.caret,
+        wpm: results.wpm,
+        accuracy,
+      }).catch(console.error);
+
+      // Broadcast finish
+      channelRef.current?.publish("player:finished", {
+        name: userName,
+        wpm: results.wpm,
+        accuracy,
       });
 
-      setCaretCoords(newCoords);
-    };
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => {
+        setStatus("FINISHED");
+      }, 0);
+    }
+  }, [
+    results,
+    status,
+    raceCode,
+    typing.caret,
+    typing.correctChars,
+    typing.typedChars,
+    userName,
+  ]);
 
-    updateCoords();
-    window.addEventListener("resize", updateCoords);
-    return () => window.removeEventListener("resize", updateCoords);
-  }, [typing.caret, otherProgress, userId]);
-
-  // --- ABLY LOGIC ---
+  // Ably setup
   useEffect(() => {
-    if (ablyClientRef.current) return;
-
-    const client = new BaseRealtime({
+    const client = new Ably.Realtime({
       authUrl: "/api/ably/token",
       clientId: userId,
-      plugins: {
-        WebSocketTransport,
-        FetchRequest,
-        RealtimePresence,
-      },
     });
-    ablyClientRef.current = client;
 
     const channel = client.channels.get(`race:${raceCode}`);
     channelRef.current = channel;
 
     const syncPresence = async () => {
       const members = await channel.presence.get();
-      setPresenceSet([...members]);
+      setPresenceSet(members);
     };
 
+    channel.presence.enter({ name: userName });
+    channel.presence.subscribe(["enter", "leave", "update"], syncPresence);
+
+    // Race start
     channel.subscribe("race:start", () => {
       setStatus("COUNTDOWN");
       let count = 3;
+      setCountdown(count);
+
       const interval = setInterval(() => {
         count -= 1;
         setCountdown(count);
+
         if (count === 0) {
           clearInterval(interval);
           setStatus("RACING");
@@ -131,250 +144,403 @@ export default function RaceCore({
       }, 1000);
     });
 
-    channel.subscribe("player:progress", (message) => {
-      // FIX: Check if clientId exists before using it as a key
-      if (message.clientId && message.clientId !== userId) {
-        setOtherProgress((prev) => ({
-          ...prev,
-          [message.clientId as string]: message.data,
-        }));
-      }
+    // Player progress updates
+    channel.subscribe("player:progress", (msg) => {
+      if (!msg.clientId || msg.clientId === userId) return;
+      setOtherProgress((prev) => ({
+        ...prev,
+        [msg.clientId]: msg.data,
+      }));
     });
 
-    channel.presence.subscribe(["enter", "leave", "present"], syncPresence);
-    channel.presence.enter({ name: userName });
+    // Player finished
+    channel.subscribe("player:finished", (msg) => {
+      setFinalResults((prev) => [
+        ...prev.filter((r) => r.clientId !== msg.clientId),
+        { ...msg.data, clientId: msg.clientId },
+      ]);
+    });
+
+    // Race ended by host (timer expired)
+    channel.subscribe("race:end", () => {
+      setStatus("FINISHED");
+    });
+
+    syncPresence();
 
     return () => {
-      channel.unsubscribe();
       channel.presence.leave();
-      client.close();
-      ablyClientRef.current = null;
+      channel.unsubscribe();
     };
-  }, [raceCode, userName, userId, timer]);
+  }, [raceCode, userId, userName]);
 
-  // Broadcast progress
+  // Send progress updates
   useEffect(() => {
-    if (status === "RACING" && channelRef.current) {
-      const interval = setInterval(() => {
-        const elapsed = 60 - timer.timeLeft;
-        const wpm =
-          elapsed > 0
-            ? Math.round(typing.correctChars / 5 / (elapsed / 60))
-            : 0;
-        channelRef.current?.publish("player:progress", {
-          caret: typing.caret,
-          wpm,
-        });
-      }, 150);
-      return () => clearInterval(interval);
+    if (status !== "RACING" || !channelRef.current) return;
+
+    const interval = setInterval(() => {
+      const elapsedTime = duration - timer.timeLeft;
+      const currentWpm =
+        elapsedTime > 0 && typing.correctChars > 0
+          ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+          : 0;
+
+      const totalTyped = typing.typedChars.length;
+      const accuracy =
+        totalTyped > 0
+          ? Math.round((typing.correctChars / totalTyped) * 100)
+          : 0;
+
+      updateProgress(raceCode, {
+        progress: typing.caret,
+        wpm: currentWpm,
+        accuracy,
+      }).catch(console.error);
+
+      channelRef.current!.publish("player:progress", {
+        caret: typing.caret,
+        wpm: currentWpm,
+        finished: false,
+      });
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [
+    status,
+    typing.caret,
+    typing.correctChars,
+    typing.typedChars.length,
+    timer.timeLeft,
+    raceCode,
+    duration,
+  ]);
+
+  // Timer end - host ends race
+  useEffect(() => {
+    if (status === "RACING" && timer.timeLeft === 0 && isHost) {
+      channelRef.current?.publish("race:end", {});
     }
-  }, [status, typing.caret, typing.correctChars, timer.timeLeft]);
+  }, [timer.timeLeft, status, isHost]);
 
-  // --- HELPERS ---
-  const getPlayerColor = (pId: string) => {
-    const idx = presenceSet.findIndex((m) => m.clientId === pId);
-    return RACER_COLORS[idx % RACER_COLORS.length] || "#FFF";
-  };
+  // Caret position calculation
+  useEffect(() => {
+    const currentChar = charRefs.current[typing.caret];
 
-  const copyCode = () => {
-    navigator.clipboard.writeText(raceCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    if (currentChar && containerRef.current && textWrapperRef.current) {
+      const wrapperRect = textWrapperRef.current.getBoundingClientRect();
+      const charRect = currentChar.getBoundingClientRect();
+      const containerRect = containerRef.current.getBoundingClientRect();
 
-  // --- RENDER ---
-  if (results)
-    return <Results {...results} onRestart={() => window.location.reload()} />;
+      const absoluteTop = charRect.top - wrapperRect.top;
+      const relativeLeft = charRect.left - containerRect.left;
 
-  if (status === "COUNTDOWN") {
+      const lineHeight = 39;
+      const currentLine = Math.floor(absoluteTop / lineHeight);
+
+      if (currentLine >= 2) {
+        const newOffset = (currentLine - 1) * lineHeight;
+        setScrollOffset(newOffset);
+      }
+
+      setCaretPos({
+        top: absoluteTop - scrollOffset,
+        left: relativeLeft,
+      });
+    }
+  }, [typing.caret, scrollOffset]);
+
+  // Other players' caret positions calculation
+  useEffect(() => {
+    if (!textWrapperRef.current || !containerRef.current) return;
+
+    const positions: Record<string, { top: number; left: number }> = {};
+
+    Object.entries(otherProgress).forEach(([clientId, data]) => {
+      const otherChar = charRefs.current[data.caret];
+      if (!otherChar) return;
+
+      const wrapperRect = textWrapperRef.current!.getBoundingClientRect();
+      const charRect = otherChar.getBoundingClientRect();
+
+      const absoluteTop = charRect.top - wrapperRect.top;
+      const relativeLeft =
+        charRect.left -
+        (containerRef.current?.getBoundingClientRect().left || 0);
+
+      positions[clientId] = {
+        top: absoluteTop - scrollOffset,
+        left: relativeLeft,
+      };
+    });
+
+    setOtherCaretPositions(positions);
+  }, [otherProgress, scrollOffset]);
+
+  // ========== LOBBY ==========
+  if (status === "LOBBY") {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <h1 className="text-[12rem] font-black text-primary animate-bounce">
-          {countdown}
-        </h1>
+      <div className="w-full max-w-2xl mx-auto pt-20">
+        {/* Race Code */}
+        <div className="text-center mb-12">
+          <p className="text-gray-400 mb-2">Race Code</p>
+          <div className="flex items-center justify-center gap-3">
+            <h1 className="text-5xl font-bold tracking-wider">{raceCode}</h1>
+            <button
+              onClick={copyCode}
+              className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              {copied ? (
+                <Check className="size-6 text-green-500" />
+              ) : (
+                <Copy className="size-6" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Race Settings */}
+        <div className="bg-gray-800/50 rounded-lg p-6 mb-8">
+          <h3 className="text-lg font-semibold mb-3">Race Settings</h3>
+          <div className="space-y-2 text-gray-300">
+            <p>
+              ⏱️ Duration:{" "}
+              <span className="text-white font-medium">{duration}s</span>
+            </p>
+            <p>
+              📝 Words:{" "}
+              <span className="text-white font-medium">{words.length}</span>
+            </p>
+          </div>
+        </div>
+
+        {/* Players */}
+        <div className="bg-gray-800/50 rounded-lg p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="size-5" />
+            <h3 className="text-lg font-semibold">
+              Players ({presenceSet.length}/5)
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {presenceSet.map((member, idx) => {
+              const isMe = member.clientId === userId;
+              const isRoomHost = idx === 0;
+
+              return (
+                <div
+                  key={member.clientId}
+                  className="flex items-center gap-3 p-3 bg-gray-900/50 rounded-lg"
+                  style={{
+                    borderLeft: `4px solid ${getPlayerColor(member.clientId || "")}`,
+                  }}
+                >
+                  {isRoomHost && <Crown className="size-4 text-yellow-500" />}
+                  <span className="font-medium">
+                    {member.data?.name || "Anonymous"}
+                  </span>
+                  {isMe && (
+                    <span className="ml-auto text-xs bg-primary/20 text-primary px-2 py-1 rounded">
+                      YOU
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Start Button */}
+        {isHost && (
+          <button
+            onClick={() => channelRef.current?.publish("race:start", {})}
+            disabled={presenceSet.length < 2}
+            className="w-full mt-8 px-6 py-4 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {presenceSet.length < 2 ? "Waiting for players..." : "Start Race"}
+          </button>
+        )}
+
+        {!isHost && (
+          <div className="text-center mt-8 text-gray-400">
+            Waiting for host to start the race...
+          </div>
+        )}
       </div>
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto py-10 px-4">
-      {status === "WAITING" ? (
-        <div className="flex flex-col items-center justify-center space-y-8 py-20 bg-gray-900/30 rounded-3xl border border-gray-800">
-          <div className="text-center">
-            <h2 className="text-sm uppercase tracking-[0.3em] text-gray-500 mb-2">
-              Lobby Joined
-            </h2>
-            <div className="flex items-center gap-3 justify-center">
-              <h1 className="text-5xl font-black text-white">{raceCode}</h1>
-              <button
-                onClick={copyCode}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                {copied ? (
-                  <Check className="text-green-500" />
-                ) : (
-                  <Copy className="text-gray-500" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-4 max-w-2xl">
-            {presenceSet.map((m) => (
-              <div
-                key={m.clientId}
-                className="flex items-center gap-3 px-5 py-3 bg-gray-900 border border-gray-800 rounded-2xl"
-                style={{
-                  borderLeft: `4px solid ${getPlayerColor(m.clientId)}`,
-                }}
-              >
-                <div
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: getPlayerColor(m.clientId) }}
-                />
-                <span className="font-bold">{m.data?.name}</span>
-                {m.clientId === userId && (
-                  <span className="text-xs text-gray-600">YOU</span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {isHost ? (
-            <button
-              onClick={() => channelRef.current?.publish("race:start", {})}
-              className="px-12 py-4 bg-primary text-black font-black rounded-2xl hover:scale-105 transition-transform"
-            >
-              START ENGINE
-            </button>
-          ) : (
-            <p className="text-gray-500 animate-pulse">
-              Waiting for host to start...
-            </p>
-          )}
+  // ========== COUNTDOWN ==========
+  if (status === "COUNTDOWN") {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-9xl font-black text-primary animate-pulse">
+          {countdown}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 items-start">
-          <div className="lg:col-span-3 relative">
-            <div className="mb-10 flex justify-between items-center">
-              <div className="text-5xl font-black text-white/20">
-                {timer.timeLeft}s
-              </div>
-              <div className="flex items-center gap-2 text-primary font-mono bg-primary/10 px-4 py-2 rounded-lg">
-                <Users size={16} /> {presenceSet.length} RACERS
-              </div>
-            </div>
+      </div>
+    );
+  }
 
-            <div className="relative rounded-xl bg-gray-900/20 p-2 min-h-[140px]">
-              {Object.entries(caretCoords).map(([pId, pos]) => {
-                const isMe = pId === userId;
-                const color = getPlayerColor(pId);
-                const name =
-                  presenceSet.find((m) => m.clientId === pId)?.data?.name ||
-                  "Racer";
+  // ========== FINISHED ==========
+  if (status === "FINISHED") {
+    const totalTyped = typing.typedChars.length;
+    const myAccuracy =
+      totalTyped > 0 ? Math.round((typing.correctChars / totalTyped) * 100) : 0;
 
-                return (
-                  <div
-                    key={pId}
-                    className="absolute transition-all duration-150 ease-out z-10"
-                    style={{ top: pos.top, left: pos.left }}
-                  >
-                    <div
-                      className={`h-9 w-0.5 ${
-                        isMe ? "animate-pulse" : "opacity-40"
-                      }`}
-                      style={{
-                        backgroundColor: color,
-                        boxShadow: isMe ? `0 0 15px ${color}` : "none",
-                      }}
-                    />
-                    <div
-                      className={`absolute -top-7 left-0 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-xl ${
-                        isMe ? "opacity-100" : "opacity-40"
-                      }`}
-                      style={{ backgroundColor: color, color: "#000" }}
-                    >
-                      {isMe ? "YOU" : name}
-                    </div>
+    const sortedResults = [
+      ...finalResults,
+      results && {
+        name: userName,
+        wpm: results.wpm,
+        accuracy: myAccuracy,
+        clientId: userId,
+      },
+    ]
+      .filter(Boolean)
+      .sort((a, b) => b!.wpm - a!.wpm);
+
+    return (
+      <div className="w-full max-w-3xl mx-auto pt-12">
+        <h1 className="text-4xl font-bold text-center mb-8">Race Complete!</h1>
+
+        <div className="bg-gray-800/50 rounded-lg p-6">
+          <h2 className="text-2xl font-semibold mb-4">Final Results</h2>
+          <div className="space-y-3">
+            {sortedResults.map((result, idx) => {
+              if (!result) return null;
+              const isMe = result.clientId === userId;
+              const medal =
+                idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
+
+              return (
+                <div
+                  key={result.clientId}
+                  className={`flex items-center gap-4 p-4 rounded-lg ${
+                    isMe
+                      ? "bg-primary/10 border border-primary/30"
+                      : "bg-gray-900/50"
+                  }`}
+                >
+                  <div className="text-2xl font-bold w-8">
+                    {medal || `#${idx + 1}`}
                   </div>
-                );
-              })}
-
-              <div className="text-3xl font-mono leading-relaxed select-none outline-none">
-                {text.split("").map((char, i) => {
-                  const typed = typing.typedChars[i];
-                  let color = "text-gray-600";
-                  if (typed)
-                    color = typed.correct ? "text-white" : "text-red-500";
-                  return (
-                    <span
-                      key={i}
-                      ref={(el) => {
-                        charRefs.current[i] = el;
-                      }}
-                      className={`${color} transition-colors`}
-                    >
-                      {char}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="mt-20">
-              <KeyboardUI />
-            </div>
-          </div>
-
-          <div className="bg-gray-900/50 rounded-3xl border border-gray-800 p-6">
-            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">
-              Live Rankings
-            </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-1 h-8 rounded-full"
-                    style={{ backgroundColor: getPlayerColor(userId) }}
-                  />
-                  <span className="font-bold text-sm">YOU</span>
+                  <div className="flex-1">
+                    <p className="font-semibold">
+                      {result.name} {isMe && "(You)"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary">
+                      {result.wpm} WPM
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {result.accuracy}% accuracy
+                    </p>
+                  </div>
                 </div>
-                <span className="font-mono text-primary font-bold">
-                  {Math.round(
-                    typing.correctChars / 5 / ((60 - timer.timeLeft) / 60)
-                  ) || 0}{" "}
-                  <span className="text-[10px] text-gray-500 uppercase">
-                    WPM
-                  </span>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== RACING ==========
+  const elapsedTime = duration - timer.timeLeft;
+  const myWpm =
+    elapsedTime > 0 && typing.correctChars > 0
+      ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+      : 0;
+
+  return (
+    <div className="w-full flex flex-col flex-1">
+      {/* Timer & Leaderboard */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="text-3xl font-bold">{timer.timeLeft}s</div>
+
+        {/* Live Leaderboard */}
+        <div className="flex gap-4">
+          {presenceSet.map((member) => {
+            const clientId = member.clientId || "";
+            const isMe = clientId === userId;
+            const progress = isMe ? { wpm: myWpm } : otherProgress[clientId];
+
+            return (
+              <div
+                key={clientId}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-800 rounded-lg"
+                style={{ borderLeft: `3px solid ${getPlayerColor(clientId)}` }}
+              >
+                <span className="text-sm">{member.data?.name}</span>
+                <span className="text-primary font-bold">
+                  {progress?.wpm || 0}
                 </span>
               </div>
-              {Object.entries(otherProgress).map(([pId, data]) => (
-                <div
-                  key={pId}
-                  className="flex justify-between items-center opacity-70"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-1 h-8 rounded-full"
-                      style={{ backgroundColor: getPlayerColor(pId) }}
-                    />
-                    <span className="font-bold text-sm truncate max-w-[80px]">
-                      {presenceSet.find((m) => m.clientId === pId)?.data
-                        ?.name || "Racer"}
-                    </span>
-                  </div>
-                  <span className="font-mono font-bold">
-                    {data.wpm}{" "}
-                    <span className="text-[10px] text-gray-500 uppercase">
-                      WPM
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* Typing Area */}
+      <div
+        ref={containerRef}
+        className="relative rounded-lg text-2xl leading-relaxed font-mono select-none overflow-hidden"
+        style={{ height: "117px" }}
+      >
+        {/* Self caret */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            top: `${caretPos.top}px`,
+            left: `${caretPos.left}px`,
+          }}
+        >
+          <Caret color={getPlayerColor(userId)} />
+        </div>
+
+        {/* Other players' carets */}
+        {Object.entries(otherCaretPositions).map(([clientId, pos]) => (
+          <div
+            key={clientId}
+            className="absolute pointer-events-none"
+            style={{
+              top: `${pos.top}px`,
+              left: `${pos.left}px`,
+            }}
+          >
+            <Caret color={getPlayerColor(clientId)} />
+          </div>
+        ))}
+
+        <div
+          ref={textWrapperRef}
+          className="relative transition-transform duration-150 ease-out"
+          style={{ transform: `translateY(-${scrollOffset}px)` }}
+        >
+          {text.split("").map((char, i) => {
+            const typed = typing.typedChars[i];
+            let color = "text-gray-500";
+
+            if (typed) {
+              color = typed.correct ? "text-primary" : "text-red-900";
+            }
+
+            return (
+              <span
+                key={i}
+                ref={(el) => {
+                  charRefs.current[i] = el;
+                }}
+                className={`${color} transition-colors`}
+              >
+                {char}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+
+      <KeyboardUI />
     </div>
   );
 }

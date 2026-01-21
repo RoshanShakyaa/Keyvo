@@ -22,5 +22,16 @@ export const loginSchema = z.object({
   }),
 });
 
+export const createRaceSchema = z.object({
+  duration: z
+    .number()
+    .int()
+    .refine((v) => [30, 60, 120].includes(v), "Invalid duration"),
+  punctuation: z.boolean(),
+  numbers: z.boolean(),
+});
+
+export type raceSchemaType = z.infer<typeof createRaceSchema>;
+
 export type loginSchemaType = z.infer<typeof loginSchema>;
 export type registerSchemaType = z.infer<typeof registerSchema>;

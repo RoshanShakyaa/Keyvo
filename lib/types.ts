@@ -40,3 +40,9 @@ export const RACER_COLORS = [
   "#14B8A6",
   "#F97316",
 ];
+
+export type RaceSettings = {
+  duration: number; 
+  punctuation: boolean;
+  numbers: boolean;
+};

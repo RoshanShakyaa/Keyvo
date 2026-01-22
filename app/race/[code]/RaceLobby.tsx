@@ -3,11 +3,10 @@
 import { Check, Copy, Crown, Users } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as Ably from "ably";
-import type { PresenceMessage } from "ably";
 import { useTestEngine } from "@/hooks/useTestEngine";
 import { RACER_COLORS } from "@/lib/types";
 import KeyboardUI from "@/components/KeyboardUI";
-import { finishRace, updateProgress } from "@/app/actions/race";
+import { finishRace } from "@/app/actions/race";
 import { Caret } from "./_components/MultiplayerCaret";
 
 type RaceCoreProps = {
@@ -28,10 +27,8 @@ export function RaceCore({
   duration,
 }: RaceCoreProps) {
   const [copied, setCopied] = useState(false);
-  const [presenceSet, setPresenceSet] = useState<PresenceMessage[]>([]);
-  const [status, setStatus] = useState<
-    "LOBBY" | "COUNTDOWN" | "RACING" | "FINISHED"
-  >("LOBBY");
+  const [presenceSet, setPresenceSet] = useState<Ably.PresenceMessage[]>([]);
+  const [status, setStatus] = useState<"LOBBY" | "COUNTDOWN" | "RACING" | "FINISHED">("LOBBY");
   const [countdown, setCountdown] = useState(3);
   const [otherProgress, setOtherProgress] = useState<
     Record<string, { caret: number; wpm: number; finished: boolean }>
@@ -42,12 +39,8 @@ export function RaceCore({
 
   const channelRef = useRef<Ably.RealtimeChannel | null>(null);
   const hasFinishedRef = useRef(false);
-  const { text, typing, timer, results } = useTestEngine(
-    words,
-    duration,
-    "time",
-  );
-
+  const { text, typing, timer, results } = useTestEngine(words, duration, "time");
+  
   const charRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const textWrapperRef = useRef<HTMLDivElement>(null);
@@ -72,13 +65,12 @@ export function RaceCore({
   useEffect(() => {
     if (results && status === "RACING" && !hasFinishedRef.current) {
       hasFinishedRef.current = true;
-
+      
       const totalTyped = typing.typedChars.length;
-      const accuracy =
-        totalTyped > 0
-          ? Math.round((typing.correctChars / totalTyped) * 100)
-          : 0;
-
+      const accuracy = totalTyped > 0 
+        ? Math.round((typing.correctChars / totalTyped) * 100) 
+        : 0;
+      
       // Save to database
       finishRace(raceCode, {
         progress: typing.caret,
@@ -98,15 +90,7 @@ export function RaceCore({
         setStatus("FINISHED");
       }, 0);
     }
-  }, [
-    results,
-    status,
-    raceCode,
-    typing.caret,
-    typing.correctChars,
-    typing.typedChars,
-    userName,
-  ]);
+  }, [results, status, raceCode, typing.caret, typing.correctChars, typing.typedChars, userName]);
 
   // Ably setup
   useEffect(() => {
@@ -174,29 +158,17 @@ export function RaceCore({
     };
   }, [raceCode, userId, userName]);
 
-  // Send progress updates
+  // Send progress updates (Ably only - NO database writes)
   useEffect(() => {
     if (status !== "RACING" || !channelRef.current) return;
 
     const interval = setInterval(() => {
       const elapsedTime = duration - timer.timeLeft;
-      const currentWpm =
-        elapsedTime > 0 && typing.correctChars > 0
-          ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
-          : 0;
+      const currentWpm = elapsedTime > 0 && typing.correctChars > 0
+        ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+        : 0;
 
-      const totalTyped = typing.typedChars.length;
-      const accuracy =
-        totalTyped > 0
-          ? Math.round((typing.correctChars / totalTyped) * 100)
-          : 0;
-
-      updateProgress(raceCode, {
-        progress: typing.caret,
-        wpm: currentWpm,
-        accuracy,
-      }).catch(console.error);
-
+      // Only broadcast via Ably - NO database call
       channelRef.current!.publish("player:progress", {
         caret: typing.caret,
         wpm: currentWpm,
@@ -205,15 +177,7 @@ export function RaceCore({
     }, 200);
 
     return () => clearInterval(interval);
-  }, [
-    status,
-    typing.caret,
-    typing.correctChars,
-    typing.typedChars.length,
-    timer.timeLeft,
-    raceCode,
-    duration,
-  ]);
+  }, [status, typing.caret, typing.correctChars, timer.timeLeft, duration]);
 
   // Timer end - host ends race
   useEffect(() => {
@@ -249,23 +213,19 @@ export function RaceCore({
     }
   }, [typing.caret, scrollOffset]);
 
-  // Other players' caret positions calculation
+  // Calculate other players' caret positions
   useEffect(() => {
-    if (!textWrapperRef.current || !containerRef.current) return;
-
     const positions: Record<string, { top: number; left: number }> = {};
 
     Object.entries(otherProgress).forEach(([clientId, data]) => {
       const otherChar = charRefs.current[data.caret];
-      if (!otherChar) return;
+      if (!otherChar || !textWrapperRef.current || !containerRef.current) return;
 
-      const wrapperRect = textWrapperRef.current!.getBoundingClientRect();
+      const wrapperRect = textWrapperRef.current.getBoundingClientRect();
       const charRect = otherChar.getBoundingClientRect();
 
       const absoluteTop = charRect.top - wrapperRect.top;
-      const relativeLeft =
-        charRect.left -
-        (containerRef.current?.getBoundingClientRect().left || 0);
+      const relativeLeft = charRect.left - containerRef.current.getBoundingClientRect().left;
 
       positions[clientId] = {
         top: absoluteTop - scrollOffset,
@@ -302,14 +262,8 @@ export function RaceCore({
         <div className="bg-gray-800/50 rounded-lg p-6 mb-8">
           <h3 className="text-lg font-semibold mb-3">Race Settings</h3>
           <div className="space-y-2 text-gray-300">
-            <p>
-              ⏱️ Duration:{" "}
-              <span className="text-white font-medium">{duration}s</span>
-            </p>
-            <p>
-              📝 Words:{" "}
-              <span className="text-white font-medium">{words.length}</span>
-            </p>
+            <p>⏱️ Duration: <span className="text-white font-medium">{duration}s</span></p>
+            <p>📝 Words: <span className="text-white font-medium">{words.length}</span></p>
           </div>
         </div>
 
@@ -325,7 +279,7 @@ export function RaceCore({
             {presenceSet.map((member, idx) => {
               const isMe = member.clientId === userId;
               const isRoomHost = idx === 0;
-
+              
               return (
                 <div
                   key={member.clientId}
@@ -383,8 +337,9 @@ export function RaceCore({
   // ========== FINISHED ==========
   if (status === "FINISHED") {
     const totalTyped = typing.typedChars.length;
-    const myAccuracy =
-      totalTyped > 0 ? Math.round((typing.correctChars / totalTyped) * 100) : 0;
+    const myAccuracy = totalTyped > 0 
+      ? Math.round((typing.correctChars / totalTyped) * 100) 
+      : 0;
 
     const sortedResults = [
       ...finalResults,
@@ -408,33 +363,24 @@ export function RaceCore({
             {sortedResults.map((result, idx) => {
               if (!result) return null;
               const isMe = result.clientId === userId;
-              const medal =
-                idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
+              const medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
 
               return (
                 <div
                   key={result.clientId}
                   className={`flex items-center gap-4 p-4 rounded-lg ${
-                    isMe
-                      ? "bg-primary/10 border border-primary/30"
-                      : "bg-gray-900/50"
+                    isMe ? "bg-primary/10 border border-primary/30" : "bg-gray-900/50"
                   }`}
                 >
-                  <div className="text-2xl font-bold w-8">
-                    {medal || `#${idx + 1}`}
-                  </div>
+                  <div className="text-2xl font-bold w-8">{medal || `#${idx + 1}`}</div>
                   <div className="flex-1">
                     <p className="font-semibold">
                       {result.name} {isMe && "(You)"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">
-                      {result.wpm} WPM
-                    </p>
-                    <p className="text-sm text-gray-400">
-                      {result.accuracy}% accuracy
-                    </p>
+                    <p className="text-2xl font-bold text-primary">{result.wpm} WPM</p>
+                    <p className="text-sm text-gray-400">{result.accuracy}% accuracy</p>
                   </div>
                 </div>
               );
@@ -447,23 +393,24 @@ export function RaceCore({
 
   // ========== RACING ==========
   const elapsedTime = duration - timer.timeLeft;
-  const myWpm =
-    elapsedTime > 0 && typing.correctChars > 0
-      ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
-      : 0;
+  const myWpm = elapsedTime > 0 && typing.correctChars > 0
+    ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+    : 0;
 
   return (
     <div className="w-full flex flex-col flex-1">
       {/* Timer & Leaderboard */}
       <div className="flex items-center justify-between mb-8">
         <div className="text-3xl font-bold">{timer.timeLeft}s</div>
-
+        
         {/* Live Leaderboard */}
         <div className="flex gap-4">
           {presenceSet.map((member) => {
             const clientId = member.clientId || "";
             const isMe = clientId === userId;
-            const progress = isMe ? { wpm: myWpm } : otherProgress[clientId];
+            const progress = isMe
+              ? { wpm: myWpm }
+              : otherProgress[clientId];
 
             return (
               <div
@@ -472,9 +419,7 @@ export function RaceCore({
                 style={{ borderLeft: `3px solid ${getPlayerColor(clientId)}` }}
               >
                 <span className="text-sm">{member.data?.name}</span>
-                <span className="text-primary font-bold">
-                  {progress?.wpm || 0}
-                </span>
+                <span className="text-primary font-bold">{progress?.wpm || 0}</span>
               </div>
             );
           })}
@@ -499,18 +444,20 @@ export function RaceCore({
         </div>
 
         {/* Other players' carets */}
-        {Object.entries(otherCaretPositions).map(([clientId, pos]) => (
-          <div
-            key={clientId}
-            className="absolute pointer-events-none"
-            style={{
-              top: `${pos.top}px`,
-              left: `${pos.left}px`,
-            }}
-          >
-            <Caret color={getPlayerColor(clientId)} />
-          </div>
-        ))}
+        {Object.entries(otherCaretPositions).map(([clientId, pos]) => {
+          return (
+            <div
+              key={clientId}
+              className="absolute pointer-events-none"
+              style={{
+                top: `${pos.top}px`,
+                left: `${pos.left}px`,
+              }}
+            >
+              <Caret color={getPlayerColor(clientId)} />
+            </div>
+          );
+        })}
 
         <div
           ref={textWrapperRef}

@@ -4,6 +4,7 @@ import { getRandomWords } from "@/lib/words";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "@/lib/get-session";
 import { RaceDTO } from "@/lib/types";
+import { RaceSettings } from "../../lib/types";
 
 function generateRaceCode(): string {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -14,12 +15,6 @@ function generateRaceCode(): string {
   return code;
 }
 
-export type RaceSettings = {
-  duration: number; // 30, 60, or 120 seconds
-  punctuation: boolean;
-  numbers: boolean;
-};
-
 export async function createRace(settings: RaceSettings) {
   const session = await getServerSession();
   if (!session?.user) throw new Error("Unauthorized");
@@ -29,11 +24,8 @@ export async function createRace(settings: RaceSettings) {
     code = generateRaceCode();
   }
 
-  // Generate words based on duration
-  // Rule: Average typist does ~40 WPM, so for 60s = 40 words
   const duration = settings.duration;
   let wordCount = Math.ceil((duration / 60) * 40);
-  // Add 50% buffer so fast typists don't run out of words
   wordCount = Math.ceil(wordCount * 1.5);
 
   const words = getRandomWords(wordCount, {
@@ -148,34 +140,6 @@ export async function startRace(code: string) {
     data: {
       status: "COUNTDOWN",
       startTime: new Date(),
-    },
-  });
-
-  return { success: true };
-}
-
-export async function updateProgress(
-  code: string,
-  stats: {
-    progress: number;
-    wpm: number;
-    accuracy: number;
-  },
-) {
-  const session = await getServerSession();
-  if (!session?.user) throw new Error("Unauthorized");
-
-  await prisma.raceParticipant.update({
-    where: {
-      raceId_userId: {
-        raceId: (await prisma.race.findUnique({ where: { code } }))!.id,
-        userId: session.user.id,
-      },
-    },
-    data: {
-      progress: stats.progress,
-      wpm: Math.round(stats.wpm),
-      accuracy: Math.round(stats.accuracy),
     },
   });
 

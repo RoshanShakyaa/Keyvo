@@ -8,7 +8,7 @@ import type { PresenceMessage } from "ably";
 import { useTestEngine } from "@/hooks/useTestEngine";
 import { RACER_COLORS } from "@/lib/types";
 import KeyboardUI from "@/components/KeyboardUI";
-import { finishRace } from "@/app/actions/race";
+import { finishRace, endRace, startRace } from "@/app/actions/race";
 import { Caret } from "./_components/MultiplayerCaret";
 
 type RaceCoreProps = {
@@ -141,6 +141,11 @@ export function RaceCore({
           clearInterval(interval);
           setStatus("RACING");
           timer.start();
+
+          // Update database status to RACING
+          if (isHost) {
+            startRace(raceCode).catch(console.error);
+          }
         }
       }, 1000);
     });
@@ -203,9 +208,12 @@ export function RaceCore({
   // Timer end - host ends race
   useEffect(() => {
     if (status === "RACING" && timer.timeLeft === 0 && isHost) {
+      // Update database
+      endRace(raceCode).catch(console.error);
+      // Broadcast to other players
       channelRef.current?.publish("race:end", {});
     }
-  }, [timer.timeLeft, status, isHost]);
+  }, [timer.timeLeft, status, isHost, raceCode]);
 
   // Caret position calculation (self)
   useLayoutEffect(() => {
@@ -502,6 +510,7 @@ export function RaceCore({
           <Caret color={getPlayerColor(userId)} />
         </motion.div>
 
+        {/* Other players' carets */}
         {Object.entries(otherCaretPositions).map(([clientId, position]) => (
           <div
             key={clientId}

@@ -189,9 +189,11 @@ export function RaceCore({
 
     const interval = setInterval(() => {
       const elapsedTime = duration - timer.timeLeft;
+
+      // Don't calculate WPM until at least 3 seconds have elapsed (avoid wild fluctuations)
       const currentWpm =
-        elapsedTime > 0 && typing.correctChars > 0
-          ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+        elapsedTime >= 3 && typing.correctChars > 0
+          ? Math.round(typing.correctChars / 5 / (elapsedTime / 60))
           : 0;
 
       // Only broadcast via Ably - NO database call
@@ -454,9 +456,11 @@ export function RaceCore({
 
   // ========== RACING ==========
   const elapsedTime = duration - timer.timeLeft;
+
+  // Don't show WPM for first 3 seconds to avoid wild fluctuations
   const myWpm =
-    elapsedTime > 0 && typing.correctChars > 0
-      ? Math.round(((typing.correctChars / 5) * 60) / elapsedTime)
+    elapsedTime >= 3 && typing.correctChars > 0
+      ? Math.round(typing.correctChars / 5 / (elapsedTime / 60))
       : 0;
 
   return (

@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createRaceSchema, raceSchemaType } from "@/lib/zodSchema";
 import { createRace } from "@/app/actions/race";
+import { UsersRound } from "lucide-react";
 
 export function CreateRaceButton() {
   const router = useRouter();
@@ -42,10 +43,11 @@ export function CreateRaceButton() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="px-6 py-3 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          className="flex px-6 py-3 items-center gap-2 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-colors"
           disabled={createRacePending}
         >
-          Create Race
+          <UsersRound className="size-4" />
+          Create Race Lobby
         </button>
       </DialogTrigger>
 

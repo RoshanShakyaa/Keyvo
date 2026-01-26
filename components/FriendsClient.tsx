@@ -13,6 +13,8 @@ import {
   Swords,
   UsersRound,
   Clock,
+  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 import {
@@ -30,20 +32,29 @@ import {
 } from "@/hooks/useQueryOptions";
 import { CreateRaceButton } from "./CreateRaceButton";
 import { JoinRaceButton } from "./JoinRaceButton";
+import { getSuggestedFriends } from "@/app/actions/friend-suggestion";
 
 export default function FriendsClient() {
   const queryClient = useQueryClient();
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
-  const [activeTab, setActiveTab] = useState<"friends" | "requests" | "search">(
-    "friends"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "friends" | "requests" | "suggested" | "search"
+  >("friends");
 
   // Queries
   const { data: friendsData } = useQuery(createFriendsQueryOptions());
   const { data: pendingData } = useQuery(createPendingRequestsQueryOptions());
   const { data: sentData } = useQuery(createSentRequestsQueryOptions());
+
+  // Suggested friends query
+  const { data: suggestedFriends = [], isLoading: loadingSuggestions } =
+    useQuery({
+      queryKey: ["suggestedFriends"],
+      queryFn: () => getSuggestedFriends(10),
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
 
   const friends = friendsData?.friends ?? [];
   const pendingRequests = pendingData?.requests ?? [];
@@ -66,9 +77,12 @@ export default function FriendsClient() {
     startTransition(async () => {
       const result = await sendFriendRequest(userId);
       if (result.success) {
-        // Refresh search and sent requests
-        await handleSearch();
+        // Refresh queries
+        queryClient.invalidateQueries({ queryKey: ["suggestedFriends"] });
         queryClient.invalidateQueries({ queryKey: ["sentRequests"] });
+        if (searchResults.length > 0) {
+          await handleSearch();
+        }
       }
     });
   };
@@ -77,7 +91,6 @@ export default function FriendsClient() {
     startTransition(async () => {
       const result = await acceptFriendRequest(friendshipId);
       if (result.success) {
-        // Refresh friends and pending requests
         queryClient.invalidateQueries({ queryKey: ["friends"] });
         queryClient.invalidateQueries({ queryKey: ["pendingRequests"] });
       }
@@ -100,6 +113,7 @@ export default function FriendsClient() {
       const result = await removeFriend(friendshipId);
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ["friends"] });
+        queryClient.invalidateQueries({ queryKey: ["suggestedFriends"] });
       }
     });
   };
@@ -118,10 +132,10 @@ export default function FriendsClient() {
 
   return (
     <div className="space-y-6">
-      <CreateRaceButton />
       <JoinRaceButton />
+
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
+      <div className="flex gap-2 border-b overflow-x-auto">
         <TabButton
           active={activeTab === "friends"}
           onClick={() => setActiveTab("friends")}
@@ -137,10 +151,17 @@ export default function FriendsClient() {
           count={pendingRequests.length}
         />
         <TabButton
+          active={activeTab === "suggested"}
+          onClick={() => setActiveTab("suggested")}
+          icon={<Sparkles className="size-4" />}
+          label="Suggested"
+          count={suggestedFriends.length}
+        />
+        <TabButton
           active={activeTab === "search"}
           onClick={() => setActiveTab("search")}
           icon={<Search className="size-4" />}
-          label="Find Friends"
+          label="Search"
         />
       </div>
 
@@ -154,10 +175,8 @@ export default function FriendsClient() {
             <h2 className="text-xl font-semibold">
               Your Friends ({friends.length})
             </h2>
-            <button className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2">
-              <UsersRound className="size-4" />
-              Create Race Lobby
-            </button>
+
+            <CreateRaceButton />
           </div>
 
           {friends.length === 0 ? (
@@ -165,10 +184,10 @@ export default function FriendsClient() {
               <Users className="size-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground mb-4">No friends yet</p>
               <button
-                onClick={() => setActiveTab("search")}
+                onClick={() => setActiveTab("suggested")}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
               >
-                Find Friends
+                Find Similar Typists
               </button>
             </div>
           ) : (
@@ -210,6 +229,75 @@ export default function FriendsClient() {
                       <X className="size-4" />
                     </button>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Suggested Friends Tab */}
+      {activeTab === "suggested" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold mb-2">Suggested Friends</h2>
+            <p className="text-sm text-muted-foreground">
+              Based on your typing stats: WPM, accuracy, and consistency
+            </p>
+          </div>
+
+          {loadingSuggestions ? (
+            <div className="bg-card border rounded-lg p-12 text-center">
+              <div className="animate-spin size-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Finding similar typists...
+              </p>
+            </div>
+          ) : suggestedFriends.length === 0 ? (
+            <div className="bg-card border rounded-lg p-12 text-center">
+              <Sparkles className="size-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground mb-2">
+                No suggestions available
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Complete more typing tests to get personalized friend
+                suggestions
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {suggestedFriends.map((user) => (
+                <div
+                  key={user.userId}
+                  className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
+                      {getInitials(user.userName)}
+                    </div>
+                    <div>
+                      <div className="font-semibold">{user.userName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Avg: {user.avgWpm} WPM • {user.avgAccuracy}% accuracy
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <TrendingUp className="size-3" />
+                        {user.totalTests} tests • {user.similarityScore}% match
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleSendRequest(user.userId)}
+                    disabled={isPending}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <UserPlus className="size-4" />
+                    Add Friend
+                  </button>
                 </div>
               ))}
             </div>
@@ -424,7 +512,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors ${
+      className={`px-4 py-2 flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap ${
         active
           ? "border-primary text-primary font-semibold"
           : "border-transparent text-muted-foreground hover:text-foreground"

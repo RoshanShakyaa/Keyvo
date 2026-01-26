@@ -18,7 +18,6 @@ export function useTypingEngine(text: string, onStart: () => void) {
     (e: KeyboardEvent) => {
       if (isFinished) return;
 
-      // Allow Ctrl+R for refresh
       if (e.ctrlKey && e.key === "r") return;
 
       if (e.key === "Enter" && document.activeElement?.tagName === "BUTTON") {
@@ -28,13 +27,11 @@ export function useTypingEngine(text: string, onStart: () => void) {
 
       const key = e.key;
 
-      // Start timer on first keypress
       if (!hasStartedRef.current && key.length === 1) {
         hasStartedRef.current = true;
         onStart();
       }
 
-      // Backspace
       if (key === "Backspace") {
         e.preventDefault();
 
@@ -59,8 +56,6 @@ export function useTypingEngine(text: string, onStart: () => void) {
         return;
       }
 
-      // Normal characters
-      // Normal characters
       if (key.length === 1) {
         e.preventDefault();
         setTypedChars((prev) => {
@@ -78,7 +73,6 @@ export function useTypingEngine(text: string, onStart: () => void) {
             },
           ];
 
-          // If user pressed space, skip to the next word
           if (key === " " && expected !== " ") {
             // Find the next space or end of text
             let nextSpaceIndex = idx;
@@ -127,7 +121,7 @@ export function useTypingEngine(text: string, onStart: () => void) {
         });
       }
     },
-    [text, onStart, isFinished]
+    [text, onStart, isFinished],
   );
 
   useEffect(() => {
@@ -139,7 +133,8 @@ export function useTypingEngine(text: string, onStart: () => void) {
     setTypedChars([]);
     setIsFinished(false);
     hasStartedRef.current = false;
-  }, []); // Empty dependency array since we're just resetting state
+  }, []);
+
   const finish = useCallback(() => {
     setIsFinished(true);
   }, []);

@@ -28,7 +28,7 @@ export function JoinRaceButton() {
       <button
         onClick={handleJoin}
         disabled={isPending}
-        className="px-6 py-2 bg-primary text-black rounded font-semibold disabled:opacity-50"
+        className="px-6 py-2 bg-primary  rounded font-semibold disabled:opacity-50"
       >
         {isPending ? "Joining..." : "Join"}
       </button>

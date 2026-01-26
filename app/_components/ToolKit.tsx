@@ -1,7 +1,7 @@
 "use client";
 
 import { useKeyboardUIStore, useToolkitStore } from "@/lib/store";
-import { Keyboard } from "lucide-react";
+import { Keyboard , TimerIcon ,ALargeSmall} from "lucide-react";
 
 const ToolKit = () => {
   const toggleKeyboard = useKeyboardUIStore((s) => s.toggleKeyboard);
@@ -43,6 +43,11 @@ const ToolKit = () => {
 
       <span>|</span>
 
+<div>
+
+      <TimerIcon className="size-4" />
+</div>
+
       {/* Time Mode */}
       <button
         className={mode === "time" && time === 15 ? active : inactive}
@@ -73,7 +78,11 @@ const ToolKit = () => {
       </button>
 
       <span>|</span>
+      <div>
 
+
+      <ALargeSmall className="size-5" />
+      </div>
       {/* Words Mode */}
       <button
         className={mode === "words" && words === 10 ? active : inactive}

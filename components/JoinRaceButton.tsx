@@ -17,12 +17,12 @@ export function JoinRaceButton() {
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 ">
       <input
         value={code}
         onChange={(e) => setCode(e.target.value.toUpperCase())}
         maxLength={6}
-        className="px-4 py-2 bg-gray-800 rounded font-mono uppercase"
+        className="px-4 py-2 bg-input rounded font-mono uppercase"
       />
 
       <button

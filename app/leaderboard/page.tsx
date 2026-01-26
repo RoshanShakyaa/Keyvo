@@ -9,7 +9,7 @@ export default async function LeaderboardPage() {
   });
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="flex-1 bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 flex items-center justify-center gap-3">

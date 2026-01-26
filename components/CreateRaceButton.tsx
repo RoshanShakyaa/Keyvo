@@ -43,7 +43,7 @@ export function CreateRaceButton() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="flex px-6 py-3 items-center gap-2 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-colors"
+          className="flex px-6 py-3 items-center gap-2 bg-primary  rounded-lg font-semibold hover:bg-primary/90 transition-colors"
           disabled={createRacePending}
         >
           <UsersRound className="size-4" />

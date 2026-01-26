@@ -11,7 +11,7 @@ export default async function FriendsPage() {
   if (!session?.user) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="flex-1 bg-background p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <FriendsClient />
       </div>

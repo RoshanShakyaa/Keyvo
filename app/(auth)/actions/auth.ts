@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 export async function signUpAction(
-  values: registerSchemaType
+  values: registerSchemaType,
 ): Promise<ApiResponse> {
   try {
     const result = registerSchema.safeParse(values);
@@ -23,10 +23,12 @@ export async function signUpAction(
         message: "Invalid data",
       };
     }
+
     const email = result.data?.email;
     const password = result.data?.password;
     const name = result.data?.username;
 
+    // Step 1: Register the user
     await auth.api.signUpEmail({
       body: {
         email,
@@ -35,19 +37,28 @@ export async function signUpAction(
       },
     });
 
+    await auth.api.signInEmail({
+      body: {
+        email,
+        password,
+      },
+    });
+
     return {
-      message: "Register successful",
+      message: "Registered successfully",
       status: "success",
     };
-  } catch {
+  } catch (error) {
+    console.error("Registration error:", error);
     return {
       message: "Something went wrong",
       status: "error",
     };
   }
 }
+
 export async function signInAction(
-  values: loginSchemaType
+  values: loginSchemaType,
 ): Promise<ApiResponse> {
   try {
     const result = loginSchema.safeParse(values);
@@ -68,7 +79,8 @@ export async function signInAction(
     });
 
     redirect("/");
-  } catch {
+  } catch (error) {
+    console.error("Login error:", error);
     return {
       status: "error",
       message: "Something went wrong",

@@ -7,7 +7,9 @@ type ChartDataPoint = {
   wpm: number;
   raw: number;
   errors: number;
+  accuracy: number;
 };
+
 export function useTestEngine(
   words: string[],
   durationSeconds: number,
@@ -16,6 +18,7 @@ export function useTestEngine(
   const text = useMemo(() => words.join(" "), [words]);
   const timer = useCountdownTimer(durationSeconds);
   const typing = useTypingEngine(text, timer.start);
+
   function calculateConsistency(chartData: ChartDataPoint[]): number {
     if (chartData.length < 2) return 100;
 
@@ -78,22 +81,31 @@ export function useTestEngine(
         );
 
         if (charsAtTime.length === 0) {
-          data.push({ time: second, wpm: 0, raw: 0, errors: 0 });
+          data.push({ time: second, wpm: 0, raw: 0, errors: 0, accuracy: 100 });
           continue;
         }
 
         const correctCharsAtTime = charsAtTime.filter((c) => c.correct).length;
         const errorCharsAtTime = charsAtTime.filter((c) => !c.correct).length;
 
-        // Calculate WPM based on time elapsed so far
+        // WPM = (correct characters / 5) / (time in minutes)
+        // This gives us words per minute based on correct characters only
         const wpm = Math.round(correctCharsAtTime / 5 / (second / 60));
+
+        // Raw WPM = (all characters / 5) / (time in minutes)
         const raw = Math.round(charsAtTime.length / 5 / (second / 60));
+
+        // Accuracy at this point in time
+        const accuracy = Math.round(
+          (correctCharsAtTime / charsAtTime.length) * 100,
+        );
 
         data.push({
           time: second,
           wpm,
           raw,
           errors: errorCharsAtTime,
+          accuracy,
         });
       }
 
@@ -105,7 +117,13 @@ export function useTestEngine(
   const results = useMemo(() => {
     if (!typing.isFinished) return null;
 
-    const { rawChars, correctChars, typedChars } = typing;
+    const {
+      rawChars,
+      correctChars,
+      typedChars,
+      totalErrors,
+      totalKeysPressed,
+    } = typing;
 
     if (typedChars.length === 0) {
       return {
@@ -116,43 +134,60 @@ export function useTestEngine(
         rawChars: 0,
         correctChars: 0,
         errors: 0,
+        totalErrors: 0,
+        totalKeysPressed: 0,
         chartData: [],
       };
     }
 
-    // Calculate time based on mode
+    // Calculate actual elapsed time
+    const testStartTime = typedChars[0].timestamp;
+    const testEndTime = typedChars[typedChars.length - 1].timestamp;
+    const actualElapsedSeconds = (testEndTime - testStartTime) / 1000;
+
+    // Use actual elapsed time OR the full duration (whichever is appropriate)
     let timeToUse: number;
 
     if (mode === "time") {
-      // In time mode, always use the full duration
+      // In time mode, use the full duration
       timeToUse = durationSeconds;
     } else {
       // In words mode, use actual elapsed time
-      const testStartTime = typedChars[0].timestamp;
-      const testEndTime = typedChars[typedChars.length - 1].timestamp;
-      timeToUse = (testEndTime - testStartTime) / 1000;
+      timeToUse = actualElapsedSeconds;
     }
 
-    // Monkeytype formula: (chars / 5) / (seconds / 60)
+    // Standard WPM formula: (correct characters / 5) / (time in minutes)
     const wpm = Math.round(correctChars / 5 / (timeToUse / 60));
+
+    // Raw WPM: (all typed characters / 5) / (time in minutes)
     const rawWpm = Math.round(rawChars / 5 / (timeToUse / 60));
 
-    // Accuracy = (correctChars / rawChars) * 100
-    const accuracy =
+    // Accuracy based on FINAL state (what's currently on screen)
+    const finalAccuracy =
       rawChars === 0 ? 0 : Math.round((correctChars / rawChars) * 100);
 
-    const errors = rawChars - correctChars;
+    // Overall accuracy based on ALL keypresses (including corrected errors)
+    const overallAccuracy =
+      totalKeysPressed === 0
+        ? 100
+        : Math.round(
+            ((totalKeysPressed - totalErrors) / totalKeysPressed) * 100,
+          );
 
-    const chartData = calculateChartData(typedChars, typedChars[0].timestamp);
+    const chartData = calculateChartData(typedChars, testStartTime);
     const consistency = calculateConsistency(chartData);
+
     return {
       wpm,
       rawWpm,
-      accuracy,
-      rawChars,
+      accuracy: overallAccuracy, // Use overall accuracy (includes corrected errors)
       consistency,
+      rawChars,
       correctChars,
-      errors,
+      errors: totalErrors, // Total errors including corrected ones
+      totalErrors,
+      totalKeysPressed,
+      finalAccuracy, // What's visible on screen
       chartData,
     };
   }, [typing, durationSeconds, mode, calculateChartData]);

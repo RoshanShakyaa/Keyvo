@@ -34,6 +34,7 @@ const Register = () => {
       const result = await signUpAction(values);
       if (result.status === "success") {
         form.reset();
+        router.refresh();
         router.push("/");
         return;
       }

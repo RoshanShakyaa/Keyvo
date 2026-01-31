@@ -176,7 +176,7 @@ export default function FriendsClient() {
               Your Friends ({friends.length})
             </h2>
 
-            <CreateRaceButton />
+            <CreateRaceButton text="Create Race Lobby" />
           </div>
 
           {friends.length === 0 ? (
@@ -217,10 +217,6 @@ export default function FriendsClient() {
                   </div>
 
                   <div className="flex gap-2">
-                    <button className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 flex items-center gap-2">
-                      <Swords className="size-4" />
-                      Race
-                    </button>
                     <button
                       onClick={() => handleRemoveFriend(friend.friendshipId)}
                       disabled={isPending}

@@ -43,7 +43,6 @@ export async function createRace(settings: RaceSettings) {
     },
   });
 
-  // Automatically add host as first participant
   await prisma.raceParticipant.create({
     data: {
       raceId: race.id,

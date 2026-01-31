@@ -17,7 +17,7 @@ import { createRaceSchema, raceSchemaType } from "@/lib/zodSchema";
 import { createRace } from "@/app/actions/race";
 import { UsersRound } from "lucide-react";
 
-export function CreateRaceButton() {
+export function CreateRaceButton({ text }: { text: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [createRacePending, startRaceTransition] = useTransition();
@@ -47,7 +47,7 @@ export function CreateRaceButton() {
           disabled={createRacePending}
         >
           <UsersRound className="size-4" />
-          Create Race Lobby
+          {text}
         </button>
       </DialogTrigger>
 
@@ -64,13 +64,10 @@ export function CreateRaceButton() {
               {...form.register("duration", { valueAsNumber: true })}
               className="w-full p-2.5 rounded-lg bg-gray-800 border border-gray-700 focus:border-primary focus:outline-none"
             >
-              <option value={30}>30 seconds - Sprint</option>
-              <option value={60}>60 seconds - Standard</option>
-              <option value={120}>2 minutes - Marathon</option>
+              <option value={30}>30s - Sprint</option>
+              <option value={60}>60s - Standard</option>
+              <option value={120}>2m - Marathon</option>
             </select>
-            <p className="text-xs text-gray-400">
-              All players will type for the same amount of time
-            </p>
           </div>
 
           {/* TEXT MODIFIERS */}
@@ -84,7 +81,7 @@ export function CreateRaceButton() {
                   className="w-4 h-4 rounded border-gray-700 text-primary focus:ring-primary"
                 />
                 <div>
-                  <div className="text-sm font-medium">Include Punctuation</div>
+                  <div className="text-sm font-medium">Punctuation</div>
                   <div className="text-xs text-gray-400">
                     Commas, periods, quotes, etc.
                   </div>
@@ -98,7 +95,7 @@ export function CreateRaceButton() {
                   className="w-4 h-4 rounded border-gray-700 text-primary focus:ring-primary"
                 />
                 <div>
-                  <div className="text-sm font-medium">Include Numbers</div>
+                  <div className="text-sm font-medium">Numbers</div>
                   <div className="text-xs text-gray-400">
                     Mix in numerical digits
                   </div>

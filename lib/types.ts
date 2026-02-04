@@ -42,7 +42,20 @@ export const RACER_COLORS = [
 ];
 
 export type RaceSettings = {
-  duration: number; 
+  duration: number;
   punctuation: boolean;
   numbers: boolean;
+};
+
+export type RaceCoreProps = {
+  raceCode: string;
+  words: string[];
+  isHost: boolean;
+  userId: string;
+  userName: string;
+  duration: number;
+  settings?: {
+    punctuation: boolean;
+    numbers: boolean;
+  };
 };

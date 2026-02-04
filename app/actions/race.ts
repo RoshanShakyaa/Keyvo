@@ -162,14 +162,23 @@ export async function finishRace(
 
   if (!race) throw new Error("Race not found");
 
-  await prisma.raceParticipant.update({
+  await prisma.raceParticipant.upsert({
     where: {
       raceId_userId: {
         raceId: race.id,
         userId: session.user.id,
       },
     },
-    data: {
+    update: {
+      progress: stats.progress,
+      wpm: Math.round(stats.wpm),
+      accuracy: Math.round(stats.accuracy),
+      finished: true,
+      finishedAt: new Date(),
+    },
+    create: {
+      raceId: race.id,
+      userId: session.user.id,
       progress: stats.progress,
       wpm: Math.round(stats.wpm),
       accuracy: Math.round(stats.accuracy),
@@ -177,9 +186,6 @@ export async function finishRace(
       finishedAt: new Date(),
     },
   });
-
-  // Note: Race doesn't end when first person finishes
-  // It ends when the timer expires (handled client-side or by a separate endRace action)
 
   return { success: true };
 }

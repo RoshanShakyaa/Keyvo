@@ -22,9 +22,9 @@ const ToolKit = () => {
   const inactive = "font-normal text-muted-foreground cursor-pointer";
 
   return (
-    <div className="flex flex-col md:flex-row gap-3 md:gap-6 bg-background py-3 px-4 sm:px-6 rounded-md w-full md:w-fit mx-auto border">
-      {/* Top Row (Mobile) / Left Section (Desktop) - Keyboard, Punctuation, Numbers */}
-      <div className="flex items-center gap-3 sm:gap-4 md:gap-6 justify-center">
+    <div className="flex flex-col lg:flex-row gap-3 lg:gap-6 bg-background py-3 px-4 sm:px-6 rounded-md w-full lg:w-fit mx-auto border">
+      {/* Top Row (Mobile/Tablet) / Left Section (Desktop) - Keyboard, Punctuation, Numbers */}
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-6 justify-center">
         <button onClick={toggleKeyboard} className="shrink-0">
           <Keyboard className="size-5" />
         </button>
@@ -42,16 +42,16 @@ const ToolKit = () => {
       </div>
 
       {/* Separator - only visible on larger screens */}
-      <span className="hidden md:inline">|</span>
+      <span className="hidden lg:inline">|</span>
 
-      {/* Bottom Row (Mobile) / Right Section (Desktop) - Time and Words Options */}
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6 justify-center">
+      {/* Bottom Row (Mobile/Tablet) / Right Section (Desktop) - Time and Words Options */}
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 lg:gap-6 justify-center">
         <div className="shrink-0">
           <TimerIcon className="size-4" />
         </div>
 
         {/* Time Mode */}
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
           <button
             className={mode === "time" && time === 15 ? active : inactive}
             onClick={() => setTime(15)}
@@ -88,7 +88,7 @@ const ToolKit = () => {
         </div>
 
         {/* Words Mode */}
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
           <button
             className={mode === "words" && words === 10 ? active : inactive}
             onClick={() => setWords(10)}

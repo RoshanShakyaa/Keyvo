@@ -196,48 +196,66 @@ export function RaceCore({
     return () => clearInterval(interval);
   }, [status, typing.caret, displayWpm]);
 
-  // --- 5. Finish Logic (Database Update Here) ---
+  // --- 5. Finish Logic (Local UI Only - No DB Update) ---
   useEffect(() => {
     if (results && status === "RACING" && !hasFinishedRef.current) {
       hasFinishedRef.current = true;
 
-      // Ensure final database WPM matches the test engine's calculation
+      // Get final stats
       const finalWpm = results.wpm;
       const finalAccuracy = results.accuracy;
       const data = { name: userName, wpm: finalWpm, accuracy: finalAccuracy };
 
-      // UPDATE DATABASE ONCE AT FINISH - returns position
-      finishRace(raceCode, { progress: typing.caret, ...data })
-        .then(({ position }) => {
-          console.log(`Finished in position: ${position}`);
-          // You can store this in state if needed for display
-        })
-        .catch((err) => {
-          console.error("Failed to save finish to DB:", err);
-        });
-
+      // Broadcast to other players (for visual progress)
       if (channelRef.current && !isCleaningUpRef.current) {
         channelRef.current.publish("player:finished", data);
       }
 
+      // Show results screen to THIS player only (don't end race for others)
+      setStatus("FINISHED");
+    }
+  }, [results, status, userName]);
+
+  // --- 6. End Race When Timer Runs Out ---
+  useEffect(() => {
+    if (status === "RACING" && timer.timeLeft === 0) {
+      // Timer expired - SAVE ALL STATS TO DATABASE
+      const finalWpm = displayWpm;
+      const finalAccuracy = accuracy;
+
+      finishRace(raceCode, {
+        progress: typing.caret,
+        wpm: finalWpm,
+        accuracy: finalAccuracy,
+      }).catch((err) => {
+        console.error("Failed to save finish to DB:", err);
+      });
+
+      // Host ends the race for everyone
       if (isHost) {
         setTimeout(() => {
           if (isCleaningUpRef.current) return;
           endRace(raceCode).catch(console.error);
           channelRef.current?.publish("race:ended", {});
-        }, 2000);
+        }, 500);
       }
-
-      setStatus("FINISHED");
     }
-  }, [results, status, raceCode, userName, typing.caret, isHost]);
+  }, [
+    status,
+    timer.timeLeft,
+    isHost,
+    raceCode,
+    typing.caret,
+    displayWpm,
+    accuracy,
+  ]);
 
   const getPlayerColor = (id: string) => {
     const idx = presenceSet.findIndex((p) => p.clientId === id);
     return RACER_COLORS[idx % RACER_COLORS.length] || "#fff";
   };
 
-  // --- 6. View Dispatcher ---
+  // --- 7. View Dispatcher ---
   if (status === "LOBBY") {
     return (
       <LobbyView

@@ -33,6 +33,8 @@ import {
 import { CreateRaceButton } from "./CreateRaceButton";
 import { JoinRaceButton } from "./JoinRaceButton";
 import { getSuggestedFriends } from "@/app/actions/friend-suggestion";
+import Link from "next/link";
+import { fr } from "zod/v4/locales";
 
 export default function FriendsClient() {
   const queryClient = useQueryClient();
@@ -193,39 +195,42 @@ export default function FriendsClient() {
           ) : (
             <div className="grid gap-4">
               {friends.map((friend) => (
-                <div
+                <Link
+                  className="block"
                   key={friend.friendshipId}
-                  className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors"
+                  href={`/profile/${friend.userId}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {getInitials(friend.name)}
-                    </div>
-                    <div>
-                      <div className="font-semibold">{friend.name}</div>
-                      {friend.stats && (
-                        <div className="text-sm text-muted-foreground">
-                          Best: {friend.stats.bestWpm} WPM •{" "}
-                          {friend.stats.totalTests} tests
+                  <div className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
+                        {getInitials(friend.name)}
+                      </div>
+                      <div>
+                        <div className="font-semibold">{friend.name}</div>
+                        {friend.stats && (
+                          <div className="text-sm text-muted-foreground">
+                            Best: {friend.stats.bestWpm} WPM •{" "}
+                            {friend.stats.totalTests} tests
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground">
+                          Friends since{" "}
+                          {new Date(friend.friendsSince).toLocaleDateString()}
                         </div>
-                      )}
-                      <div className="text-xs text-muted-foreground">
-                        Friends since{" "}
-                        {new Date(friend.friendsSince).toLocaleDateString()}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleRemoveFriend(friend.friendshipId)}
-                      disabled={isPending}
-                      className="p-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
-                    >
-                      <X className="size-4" />
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleRemoveFriend(friend.friendshipId)}
+                        disabled={isPending}
+                        className="p-2 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -266,35 +271,39 @@ export default function FriendsClient() {
           ) : (
             <div className="space-y-4">
               {suggestedFriends.map((user) => (
-                <div
+                <Link
+                  className="block"
                   key={user.userId}
-                  className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors"
+                  href={`/profile/${user.userId}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
-                      {getInitials(user.userName)}
-                    </div>
-                    <div>
-                      <div className="font-semibold">{user.userName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Avg: {user.avgWpm} WPM • {user.avgAccuracy}% accuracy
+                  <div className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
+                        {getInitials(user.userName)}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <TrendingUp className="size-3" />
-                        {user.totalTests} tests • {user.similarityScore}% match
+                      <div>
+                        <div className="font-semibold">{user.userName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Avg: {user.avgWpm} WPM • {user.avgAccuracy}% accuracy
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <TrendingUp className="size-3" />
+                          {user.totalTests} tests • {user.similarityScore}%
+                          match
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <button
-                    onClick={() => handleSendRequest(user.userId)}
-                    disabled={isPending}
-                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    <UserPlus className="size-4" />
-                    Add Friend
-                  </button>
-                </div>
+                    <button
+                      onClick={() => handleSendRequest(user.userId)}
+                      disabled={isPending}
+                      className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <UserPlus className="size-4" />
+                      Add Friend
+                    </button>
+                  </div>
+                </Link>
               ))}
             </div>
           )}

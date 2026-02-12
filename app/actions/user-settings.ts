@@ -12,25 +12,44 @@ export async function updateUsername(newUsername: string) {
       return { success: false, error: "Not authenticated" };
     }
 
-    // Validate username
-    if (!newUsername || newUsername.trim().length < 3) {
+    const trimmedUsername = newUsername.trim();
+
+    // 1. Validate username length/content
+    if (!trimmedUsername || trimmedUsername.length < 3) {
       return {
         success: false,
         error: "Username must be at least 3 characters long",
       };
     }
 
-    if (newUsername.trim().length > 30) {
+    if (trimmedUsername.length > 30) {
       return {
         success: false,
         error: "Username must be less than 30 characters",
       };
     }
 
-    // Update username
+    // 2. CHECK IF USERNAME IS ALREADY TAKEN
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        name: {
+          equals: trimmedUsername,
+          mode: "insensitive", // Optional: makes 'John' and 'john' the same
+        },
+        NOT: {
+          id: session.user.id, // Don't flag if the user is keeping their own name
+        },
+      },
+    });
+
+    if (existingUser) {
+      return { success: false, error: "This username is already taken" };
+    }
+
+    // 3. Update username
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { name: newUsername.trim() },
+      data: { name: trimmedUsername },
     });
 
     return { success: true, message: "Username updated successfully" };

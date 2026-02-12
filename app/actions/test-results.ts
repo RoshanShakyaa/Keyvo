@@ -111,6 +111,30 @@ export async function getUserStats(userId: string) {
   }
 }
 
+export async function getUserById(userId: string) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        image: true,
+      },
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    return { success: true, user };
+  } catch (error) {
+    console.error("Failed to get user:", error);
+    return { success: false, error: "Failed to fetch user details" };
+  }
+}
+
 export async function getRecentTests(userId: string, limit: number = 10) {
   try {
     const tests = await prisma.testResult.findMany({

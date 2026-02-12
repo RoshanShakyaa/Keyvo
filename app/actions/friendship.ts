@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 
-// Send friend request
 export async function sendFriendRequest(addresseeId: string) {
   try {
     const session = await auth.api.getSession({
@@ -52,7 +51,6 @@ export async function sendFriendRequest(addresseeId: string) {
   }
 }
 
-// Accept friend request
 export async function acceptFriendRequest(friendshipId: string) {
   try {
     const session = await auth.api.getSession({
@@ -83,7 +81,6 @@ export async function acceptFriendRequest(friendshipId: string) {
   }
 }
 
-// Decline friend request
 export async function declineFriendRequest(friendshipId: string) {
   try {
     const session = await auth.api.getSession({
@@ -113,7 +110,6 @@ export async function declineFriendRequest(friendshipId: string) {
   }
 }
 
-// Remove friend
 export async function removeFriend(friendshipId: string) {
   try {
     const session = await auth.api.getSession({
@@ -141,7 +137,6 @@ export async function removeFriend(friendshipId: string) {
   }
 }
 
-// Get all friends (accepted)
 export async function getFriends(userId?: string) {
   try {
     const session = await auth.api.getSession({
@@ -205,7 +200,6 @@ export async function getFriends(userId?: string) {
   }
 }
 
-// Get pending friend requests (received)
 export async function getPendingRequests() {
   try {
     const session = await auth.api.getSession({
@@ -254,7 +248,6 @@ export async function getPendingRequests() {
   }
 }
 
-// Get sent requests (that are pending)
 export async function getSentRequests() {
   try {
     const session = await auth.api.getSession({
@@ -301,7 +294,6 @@ export async function getSentRequests() {
   }
 }
 
-// Search users to add as friends
 export async function searchUsers(query: string) {
   try {
     const session = await auth.api.getSession({
@@ -363,7 +355,7 @@ export async function searchUsers(query: string) {
           friendshipStatus: friendship?.status || null,
           friendshipId: friendship?.id || null,
         };
-      })
+      }),
     );
 
     return { success: true, users: usersWithStatus };

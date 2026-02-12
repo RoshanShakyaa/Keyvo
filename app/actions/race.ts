@@ -69,7 +69,8 @@ export async function getRace(code: string): Promise<RaceDTO> {
         },
         orderBy: [
           { finished: "desc" }, // Finished players first
-          { wpm: "desc" }, // Then by WPM
+          { position: "asc" }, // Then by position (1st, 2nd, 3rd...)
+          { wpm: "desc" }, // Then by WPM for unfinished players
         ],
       },
     },
@@ -137,7 +138,7 @@ export async function startRace(code: string) {
   await prisma.race.update({
     where: { code },
     data: {
-      status: "COUNTDOWN",
+      status: "RACING",
       startTime: new Date(),
     },
   });
@@ -158,9 +159,21 @@ export async function finishRace(
 
   const race = await prisma.race.findUnique({
     where: { code },
+    include: {
+      participants: {
+        where: { finished: true },
+        orderBy: [
+          { finishedAt: "asc" }, // Earlier finishers first
+          { wpm: "desc" }, // Then by WPM for same-time finishes
+        ],
+      },
+    },
   });
 
   if (!race) throw new Error("Race not found");
+
+  // Calculate position: number of players who finished before + 1
+  const position = race.participants.length + 1;
 
   await prisma.raceParticipant.upsert({
     where: {
@@ -173,6 +186,7 @@ export async function finishRace(
       progress: stats.progress,
       wpm: Math.round(stats.wpm),
       accuracy: Math.round(stats.accuracy),
+      position: position,
       finished: true,
       finishedAt: new Date(),
     },
@@ -182,12 +196,13 @@ export async function finishRace(
       progress: stats.progress,
       wpm: Math.round(stats.wpm),
       accuracy: Math.round(stats.accuracy),
+      position: position,
       finished: true,
       finishedAt: new Date(),
     },
   });
 
-  return { success: true };
+  return { success: true, position };
 }
 
 export async function endRace(code: string) {

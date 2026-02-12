@@ -58,4 +58,5 @@ export type RaceCoreProps = {
     punctuation: boolean;
     numbers: boolean;
   };
+  initialStatus?: "LOBBY" | "COUNTDOWN" | "RACING" | "FINISHED";
 };

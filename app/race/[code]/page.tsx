@@ -37,6 +37,7 @@ export default async function RacePage({
       isHost={race.hostId === session.user.id}
       userId={session.user.id}
       userName={session.user.name || "Anonymous"}
+      initialStatus={race.status}
     />
   );
 }

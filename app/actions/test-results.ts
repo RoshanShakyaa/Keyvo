@@ -125,3 +125,177 @@ export async function getRecentTests(userId: string, limit: number = 10) {
     return { success: false, error: "failed to fetch tests" };
   }
 }
+
+export async function getRecentRaces(userId: string, limit: number = 5) {
+  try {
+    const races = await prisma.raceParticipant.findMany({
+      where: {
+        userId,
+        race: {
+          status: "FINISHED", // Only get completed races
+        },
+      },
+      include: {
+        race: {
+          include: {
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    image: true,
+                  },
+                },
+              },
+              orderBy: {
+                position: "asc",
+              },
+            },
+            host: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: limit,
+    });
+
+    // Transform the data for easier consumption
+    const formattedRaces = races.map((participant) => ({
+      id: participant.race.id,
+      code: participant.race.code,
+      duration: participant.race.duration,
+      finishedAt: participant.finishedAt,
+      createdAt: participant.race.createdAt,
+      // User's performance
+      userPerformance: {
+        position: participant.position,
+        wpm: participant.wpm,
+        accuracy: participant.accuracy,
+        progress: participant.progress,
+      },
+      // All participants
+      participants: participant.race.participants.map((p) => ({
+        id: p.userId,
+        name: p.user.name,
+        image: p.user.image,
+        position: p.position,
+        wpm: p.wpm,
+        accuracy: p.accuracy,
+        finished: p.finished,
+      })),
+      totalParticipants: participant.race.participants.length,
+      wasHost: participant.race.hostId === userId,
+    }));
+
+    return { success: true, races: formattedRaces };
+  } catch (error) {
+    console.error("Failed to get recent races:", error);
+    return { success: false, error: "Failed to fetch races" };
+  }
+}
+
+export async function getRaceStats(userId: string) {
+  try {
+    const [totalRaces, wins, topThreeFinishes] = await Promise.all([
+      // Total races participated
+      prisma.raceParticipant.count({
+        where: {
+          userId,
+          finished: true,
+          race: {
+            status: "FINISHED",
+          },
+        },
+      }),
+      // Total wins (1st place)
+      prisma.raceParticipant.count({
+        where: {
+          userId,
+          position: 1,
+          race: {
+            status: "FINISHED",
+          },
+        },
+      }),
+      // Top 3 finishes
+      prisma.raceParticipant.count({
+        where: {
+          userId,
+          position: {
+            lte: 3,
+          },
+          race: {
+            status: "FINISHED",
+          },
+        },
+      }),
+    ]);
+
+    // Get best race WPM
+    const bestRace = await prisma.raceParticipant.findFirst({
+      where: {
+        userId,
+        finished: true,
+        race: {
+          status: "FINISHED",
+        },
+      },
+      orderBy: {
+        wpm: "desc",
+      },
+      select: {
+        wpm: true,
+      },
+    });
+
+    // Calculate average race WPM
+    const raceResults = await prisma.raceParticipant.findMany({
+      where: {
+        userId,
+        finished: true,
+        race: {
+          status: "FINISHED",
+        },
+      },
+      select: {
+        wpm: true,
+        accuracy: true,
+      },
+    });
+
+    const avgRaceWpm =
+      raceResults.length > 0
+        ? raceResults.reduce((sum, r) => sum + r.wpm, 0) / raceResults.length
+        : 0;
+
+    const avgRaceAccuracy =
+      raceResults.length > 0
+        ? raceResults.reduce((sum, r) => sum + (r.accuracy || 0), 0) /
+          raceResults.length
+        : 0;
+
+    return {
+      success: true,
+      stats: {
+        totalRaces,
+        wins,
+        topThreeFinishes,
+        bestRaceWpm: bestRace?.wpm || 0,
+        avgRaceWpm: Math.round(avgRaceWpm),
+        avgRaceAccuracy: Math.round(avgRaceAccuracy),
+        winRate: totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : 0,
+      },
+    };
+  } catch (error) {
+    console.error("Failed to get race stats:", error);
+    return { success: false, error: "Failed to fetch race stats" };
+  }
+}

@@ -183,10 +183,10 @@ model RaceParticipant {
 }
 
 enum RaceStatus {
-  LOBBY      // Lobby waiting for players
-  COUNTDOWN    // 3...2...1...GO!
-  RACING       // Race in progress
-  FINISHED     // Race completed
+  LOBBY      
+  COUNTDOWN   
+  RACING       
+  FINISHED     
 }
 
 enum FriendshipStatus {

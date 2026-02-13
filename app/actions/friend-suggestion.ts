@@ -230,5 +230,5 @@ export async function getSuggestedFriends(
   return rankedCandidates
     .sort((a, b) => a.distance - b.distance)
     .slice(0, k)
-    .map(({ distance, ...rest }) => rest); // Remove internal distance field
+    .map(({ distance, ...rest }) => rest);
 }

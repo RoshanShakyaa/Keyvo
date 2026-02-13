@@ -10,8 +10,6 @@ import {
   Search,
   X,
   Check,
-  Swords,
-  UsersRound,
   Clock,
   Sparkles,
   TrendingUp,
@@ -34,7 +32,6 @@ import { CreateRaceButton } from "./CreateRaceButton";
 import { JoinRaceButton } from "./JoinRaceButton";
 import { getSuggestedFriends } from "@/app/actions/friend-suggestion";
 import Link from "next/link";
-import { fr } from "zod/v4/locales";
 
 export default function FriendsClient() {
   const queryClient = useQueryClient();

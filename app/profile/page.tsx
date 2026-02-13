@@ -1,5 +1,5 @@
 import React from "react";
-import { Trophy, Target, Zap, Clock, Users, Award } from "lucide-react";
+import { Trophy, Target, Zap, Clock, Users } from "lucide-react";
 import { getServerSession } from "@/lib/get-session";
 import {
   getUserStats,
@@ -32,19 +32,6 @@ const ProfilePage = async () => {
   const recentTests = testsRes.success && testsRes.tests ? testsRes.tests : [];
   const recentRaces = racesRes.success && racesRes.races ? racesRes.races : [];
   const raceStats = raceStatsRes.success ? raceStatsRes.stats : null;
-
-  const getPositionColor = (position: number) => {
-    switch (position) {
-      case 1:
-        return "text-yellow-500";
-      case 2:
-        return "text-gray-400";
-      case 3:
-        return "text-orange-600";
-      default:
-        return "text-muted-foreground";
-    }
-  };
 
   const getPositionEmoji = (position: number) => {
     switch (position) {

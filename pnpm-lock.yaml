@@ -17,6 +17,9 @@ importers:
       '@prisma/client':
         specifier: ^7.0.1
         version: 7.0.1(prisma@7.0.1(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3))(typescript@5.9.3)
+      '@prisma/nextjs-monorepo-workaround-plugin':
+        specifier: ^7.4.0
+        version: 7.4.0
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -625,6 +628,9 @@ packages:
 
   '@prisma/get-platform@7.0.1':
     resolution: {integrity: sha512-DrsGnZOsF7PlAE7UtqmJenWti87RQtg7v9qW9alS71Pj0P6ZQV0RuzRQaql9dCWoo6qKAaF5U/L4kI826MmiZg==}
+
+  '@prisma/nextjs-monorepo-workaround-plugin@7.4.0':
+    resolution: {integrity: sha512-OFEnv3buKl7rSwhQgeUhKLTJIksAPL1oPsRV8uDAWskQwjRSR1fLxcFn6DkpQOWH1STShD7NiubEhWuVIBBbBg==}
 
   '@prisma/query-plan-executor@6.18.0':
     resolution: {integrity: sha512-jZ8cfzFgL0jReE1R10gT8JLHtQxjWYLiQ//wHmVYZ2rVkFHoh0DT8IXsxcKcFlfKN7ak7k6j0XMNn2xVNyr5cA==}
@@ -3811,6 +3817,8 @@ snapshots:
   '@prisma/get-platform@7.0.1':
     dependencies:
       '@prisma/debug': 7.0.1
+
+  '@prisma/nextjs-monorepo-workaround-plugin@7.4.0': {}
 
   '@prisma/query-plan-executor@6.18.0': {}
 

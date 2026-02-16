@@ -201,8 +201,8 @@ export function RaceCore({
     if (results && status === "RACING" && !hasFinishedRef.current) {
       hasFinishedRef.current = true;
 
-      // Get final stats
-      const finalWpm = results.wpm;
+      // Get final stats - use displayWpm (live WPM) instead of results.wpm
+      const finalWpm = displayWpm;
       const finalAccuracy = results.accuracy;
       const data = { name: userName, wpm: finalWpm, accuracy: finalAccuracy };
 
@@ -214,7 +214,7 @@ export function RaceCore({
       // Show results screen to THIS player only (don't end race for others)
       setStatus("FINISHED");
     }
-  }, [results, status, userName]);
+  }, [results, status, userName, displayWpm]);
 
   // --- 6. End Race When Timer Runs Out ---
   useEffect(() => {
@@ -286,7 +286,7 @@ export function RaceCore({
       allResults.push({
         clientId: userId,
         name: userName,
-        wpm: results.wpm,
+        wpm: displayWpm, // Use displayWpm here too for consistency
         accuracy: results.accuracy,
       });
     }

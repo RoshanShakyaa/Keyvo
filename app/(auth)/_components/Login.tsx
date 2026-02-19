@@ -38,6 +38,7 @@ const Login = () => {
         callbackURL: "/",
         fetchOptions: {
           onSuccess: () => {
+            router.refresh();
             router.push("/");
           },
           onError: () => {
@@ -55,6 +56,7 @@ const Login = () => {
         callbackURL: "/",
         fetchOptions: {
           onSuccess: () => {
+            router.refresh();
             router.push("/");
           },
           onError: () => {
@@ -75,6 +77,7 @@ const Login = () => {
         fetchOptions: {
           onSuccess: () => {
             form.reset();
+            router.refresh();
             router.push("/");
           },
           onError: (err) => {
@@ -86,7 +89,7 @@ const Login = () => {
   }
 
   return (
-    <div className=" w-[300px]">
+    <div className=" w-75">
       <Form {...form}>
         <div className="flex mb-2 gap-1 items-center">
           <LogIn className="size-5 " />

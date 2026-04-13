@@ -7,13 +7,13 @@ export const dynamic = "force-dynamic";
 const ProfilePage = async ({
   params,
 }: {
-  params: Promise<{ userId?: string[] }>;
+  params: Promise<{ userId?: string }>;
 }) => {
   const resolvedParams = await params;
   const session = await getServerSession();
 
   const targetUserId =
-    resolvedParams.userId?.[0] || session?.user?.id;
+    resolvedParams.userId || session?.user?.id;
 
   if (!targetUserId) {
     return (

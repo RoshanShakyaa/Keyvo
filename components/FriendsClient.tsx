@@ -197,7 +197,7 @@ export default function FriendsClient() {
                   key={friend.friendshipId}
                   href={`/profile/${friend.userId}`}
                 >
-                  <div className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
+                  <div  key={friend.friendshipId} className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
                         {getInitials(friend.name)}
@@ -216,7 +216,6 @@ export default function FriendsClient() {
                         </div>
                       </div>
                     </div>
-
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleRemoveFriend(friend.friendshipId)}
@@ -268,12 +267,8 @@ export default function FriendsClient() {
           ) : (
             <div className="space-y-4">
               {suggestedFriends.map((user) => (
-                <Link
-                  className="block"
-                  key={user.userId}
-                  href={`/profile/${user.userId}`}
-                >
-                  <div className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
+                  <div key={user.userId} className="bg-card border rounded-lg p-4 flex justify-between items-center hover:border-primary/50 transition-colors">
+                   <Link href={`/profile/${user.userId}`}  className="flex items-center gap-4 flex-1">
                     <div className="flex items-center gap-4">
                       <div className="size-12 rounded-full bg-primary/20 flex items-center justify-center font-semibold text-primary">
                         {getInitials(user.userName)}
@@ -290,6 +285,7 @@ export default function FriendsClient() {
                         </div>
                       </div>
                     </div>
+                    </Link>
 
                     <button
                       onClick={() => handleSendRequest(user.userId)}
@@ -300,7 +296,6 @@ export default function FriendsClient() {
                       Add Friend
                     </button>
                   </div>
-                </Link>
               ))}
             </div>
           )}

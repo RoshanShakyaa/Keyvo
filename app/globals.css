@@ -44,6 +44,9 @@
 }
 
 :root {
+  --success: #000000; /* In light mode, typed text becomes bold black */
+  --muted-foreground: oklch(0.7 0 0); /* Make untyped text even lighter (faint gray) */
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -81,7 +84,8 @@
 .dark {
   /* === Monkeytype Norse Theme === */
   /* bg: #242425, main: #2b5f6d, sub: #505b5e, text: #ccc2b1 */
-
+--success: #e1dec0; /* In Norse, typed text is a very bright cream/white */
+  --muted-foreground: #505b5e;
   /* Backgrounds */
   --background: #242425;
   --card: #2a2a2b;
@@ -140,4 +144,9 @@
   body {
     @apply bg-background text-foreground font-mono tracking-normal;
   }
+}
+
+@theme inline {
+  /* ... your other theme mappings */
+  --color-success: var(--success);
 }

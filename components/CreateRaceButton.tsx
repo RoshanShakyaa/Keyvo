@@ -51,9 +51,9 @@ export function CreateRaceButton({ text }: { text: string }) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md ">
         <DialogHeader>
-          <DialogTitle>Create Multiplayer Race</DialogTitle>
+          <DialogTitle className="text-foreground">Create Multiplayer Race</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -62,7 +62,7 @@ export function CreateRaceButton({ text }: { text: string }) {
             <label className="font-semibold text-sm">Race Duration</label>
             <select
               {...form.register("duration", { valueAsNumber: true })}
-              className="w-full p-2.5 rounded-lg bg-gray-800 border border-gray-700 focus:border-primary focus:outline-none"
+              className="w-full p-2.5 rounded-lg bg-secondary text-foreground border border-border focus:border-primary focus:outline-none appearance-none"
             >
               <option value={30}>30s - Sprint</option>
               <option value={60}>60s - Standard</option>
@@ -107,7 +107,7 @@ export function CreateRaceButton({ text }: { text: string }) {
           <button
             type="submit"
             disabled={createRacePending}
-            className="w-full px-6 py-3 bg-primary text-black rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-primary text-primary-foreground  rounded-lg font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {createRacePending ? "Creating..." : "Create Race"}
           </button>
